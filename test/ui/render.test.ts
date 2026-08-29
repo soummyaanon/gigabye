@@ -6,7 +6,7 @@ import type { Reviewed, RunManifest } from '../../src/types.ts'
 function item(over: Partial<Reviewed> = {}): Reviewed {
   return {
     path: '/Users/x/proj/.next', label: '.next', group: 'builds',
-    bytes: 1_181_116_006, selected: true, warnings: [], ...over,
+    bytes: 1_181_116_006, selected: true, selectable: true, warnings: [], ...over,
   }
 }
 
@@ -69,4 +69,19 @@ test('still prints a note that adds information beyond the warning', () => {
   )
   assert.match(out, /idle 214d/)
   assert.match(out, /tracked in git/)
+})
+
+test('renders report-only items in their own section, outside the reclaimable total', () => {
+  const out = renderReport(
+    [
+      item(),
+      item({ path: '/Users/x/Library/Application Support/Slack', label: 'Slack', group: 'orphans',
+             bytes: 500_000_000, selected: false, selectable: false, warnings: ['review manually'] }),
+    ],
+    NO_COLOR,
+  )
+  assert.match(out, /ORPHANED APP DATA/)
+  assert.match(out, /Slack/)
+  // 1_181_116_006 alone is 1.1 GB; adding the 500 MB orphan would read 1.6 GB.
+  assert.match(out, /reclaimable: 1\.1 GB/)
 })

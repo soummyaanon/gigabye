@@ -110,11 +110,17 @@ async function main(argv: string[]): Promise<number> {
     return 2
   }
 
-  if (opts.json) { process.stdout.write(`${renderJson(reviewed)}\n`); return 0 }
-  if (opts.dryRun) {
+  // Report-only rows (the orphans group) are shown but can never be deleted,
+  // so a run that found nothing else has still reclaimed nothing: print the
+  // report so the user sees the orphans, then exit 2.
+  const anySelectable = reviewed.some((r) => r.selectable)
+
+  if (opts.json) { process.stdout.write(`${renderJson(reviewed)}\n`); return anySelectable ? 0 : 2 }
+  if (opts.dryRun || !anySelectable) {
     process.stdout.write(`${renderReport(reviewed, { color, home })}\n`)
-    process.stdout.write('\nrun `gigabye` to pick what to delete\n')
-    return 0
+    if (anySelectable) process.stdout.write('\nrun `gigabye` to pick what to delete\n')
+    else process.stdout.write('\nnothing here is reclaimable — the rows above are for review only\n')
+    return anySelectable ? 0 : 2
   }
 
   // -- choose --------------------------------------------------------

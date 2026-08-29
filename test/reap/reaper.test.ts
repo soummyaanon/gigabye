@@ -19,7 +19,7 @@ async function sandbox() {
 }
 
 function reviewed(p: string, bytes: number): Reviewed {
-  return { path: p, label: '.next', group: 'builds', bytes, selected: true, warnings: [] }
+  return { path: p, label: '.next', group: 'builds', bytes, selected: true, selectable: true, warnings: [] }
 }
 
 const OPTS = (runsDir: string) => ({ version: '0.1.0', runsDir })
@@ -123,4 +123,38 @@ test('writes a manifest that readManifests can read back', async () => {
 test('readManifests returns an empty list when no runs exist', async () => {
   const { runsDir } = await sandbox()
   assert.deepEqual(await readManifests(runsDir), [])
+})
+
+test('SAFETY: refuses a report-only item even when handed one marked selected', async () => {
+  const { home, ctx, runsDir } = await sandbox()
+  const target = path.join(home, 'Library', 'Application Support', 'Slack')
+  await fs.mkdir(target, { recursive: true })
+  await fs.writeFile(path.join(target, 'data.bin'), 'x')
+
+  // A caller that ignored `selectable` and forced selected:true. The reaper
+  // must still refuse: orphans are never deleted, by design.
+  const forced: Reviewed = {
+    path: target, label: 'Slack', group: 'orphans', bytes: 4096,
+    selected: true, selectable: true, warnings: [],
+  }
+  const m = await reap([forced], ctx, OPTS(runsDir))
+
+  assert.equal(m.items.length, 0, 'reaper deleted an orphan')
+  assert.equal(await fs.access(target).then(() => true, () => false), true, 'orphan data was deleted')
+})
+
+test('SAFETY: refuses an item the guards now mark report-only', async () => {
+  const { home, ctx, runsDir } = await sandbox()
+  const target = path.join(home, 'Library', 'Application Support', 'Discord')
+  await fs.mkdir(target, { recursive: true })
+
+  // selectable:false is what applyGuards produces for the orphans group.
+  const item: Reviewed = {
+    path: target, label: 'Discord', group: 'orphans', bytes: 4096,
+    selected: true, selectable: false, warnings: ['review manually'],
+  }
+  const m = await reap([item], ctx, OPTS(runsDir))
+
+  assert.equal(m.items.length, 0)
+  assert.equal(await fs.access(target).then(() => true, () => false), true)
 })

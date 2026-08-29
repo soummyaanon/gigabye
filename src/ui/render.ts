@@ -38,7 +38,8 @@ export function renderReport(items: Reviewed[], opts: { color: boolean; home: st
     lines.push('', `${c.bold(HEADERS[group])}  ${c.dim(formatBytes(total))}`)
 
     for (const i of inGroup) {
-      const box = i.selected ? '[x]' : '[ ]'
+      // '[-]' marks a row that exists for information only and cannot be checked.
+      const box = !i.selectable ? '[-]' : i.selected ? '[x]' : '[ ]'
       // A guard warning that repeats the scanner note verbatim (Service
       // Worker says the same thing in both) would otherwise print twice.
       const note = i.note && !i.warnings.includes(i.note) ? c.dim(`  ${i.note}`) : ''
@@ -47,7 +48,7 @@ export function renderReport(items: Reviewed[], opts: { color: boolean; home: st
     }
   }
 
-  const selected = items.filter((i) => i.selected).reduce((n, i) => n + i.bytes, 0)
+  const selected = items.filter((i) => i.selected && i.selectable).reduce((n, i) => n + i.bytes, 0)
   lines.push('', c.bold(`reclaimable: ${formatBytes(selected)}`))
   return lines.join('\n')
 }
@@ -55,10 +56,12 @@ export function renderReport(items: Reviewed[], opts: { color: boolean; home: st
 export function renderJson(items: Reviewed[]): string {
   return JSON.stringify(
     {
-      reclaimableBytes: items.filter((i) => i.selected).reduce((n, i) => n + i.bytes, 0),
+      reclaimableBytes: items
+        .filter((i) => i.selected && i.selectable)
+        .reduce((n, i) => n + i.bytes, 0),
       items: items.map((i) => ({
         path: i.path, bytes: i.bytes, group: i.group,
-        selected: i.selected, warnings: i.warnings,
+        selected: i.selected, selectable: i.selectable, warnings: i.warnings,
       })),
     },
     null, 2,

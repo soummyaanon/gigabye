@@ -20,19 +20,25 @@ export async function reap(
   ctx: GuardContext,
   opts: { version: string; runsDir: string },
 ): Promise<RunManifest> {
-  const wanted = items.filter((i) => i.selected)
+  // selectable:false means a guard returned 'report' — the orphans group.
+  // Filtered here AND re-checked against the fresh verdict below, so a
+  // caller that forged selected:true still cannot delete one.
+  const wanted = items.filter((i) => i.selected && i.selectable)
 
   // What each item was already warned about when the user chose it.
   const known = new Map(wanted.map((i) => [i.path, new Set(i.warnings)]))
 
   // Re-run the guards. Anything now blocked disappears from this list.
   const revalidated = await applyGuards(wanted, ctx)
-  const fresh = new Map(revalidated.map((r) => [r.path, r.warnings]))
+  const fresh = new Map(revalidated.map((r) => [r.path, r]))
 
   const reaped: ReapedItem[] = []
   for (const item of wanted) {
-    const nowWarns = fresh.get(item.path)
-    if (nowWarns === undefined) continue // a guard blocks it now
+    const now = fresh.get(item.path)
+    if (now === undefined) continue // a guard blocks it now
+    // A guard now says report-only. Never delete, whatever the caller asked.
+    if (!now.selectable) continue
+    const nowWarns = now.warnings
 
     // A warning that appeared AFTER the user chose is an objection they never
     // saw — for instance they ran `git add dist && commit` while reading the

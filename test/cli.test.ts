@@ -82,3 +82,43 @@ test('an unknown option exits non-zero with a useful message', async () => {
     },
   )
 })
+
+async function orphanHome(): Promise<string> {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-orphan-e2e-'))
+  const data = path.join(home, 'Library', 'Application Support', 'Slack')
+  await fs.mkdir(data, { recursive: true })
+  await fs.writeFile(path.join(data, 'blob.bin'), Buffer.alloc(2_000_000))
+  return home
+}
+
+test('reports orphaned app data instead of silently finding nothing', async () => {
+  const home = await orphanHome()
+  // Nothing is reclaimable, so the exit code is 2 and execFile rejects.
+  const res = await invoke(['--dry-run', 'orphans', '--min-size', '0'], home)
+    .catch((e: { code?: number; stdout?: string }) => e)
+  const stdout = (res as { stdout?: string }).stdout ?? ''
+
+  assert.match(stdout, /ORPHANED APP DATA/, `orphans group printed nothing: ${stdout}`)
+  assert.match(stdout, /Slack/)
+  assert.equal(
+    await fs.access(path.join(home, 'Library', 'Application Support', 'Slack')).then(() => true, () => false),
+    true, 'orphan data was deleted',
+  )
+})
+
+test('--yes never deletes orphaned app data', async () => {
+  const home = await orphanHome()
+  await invoke(['--yes', 'orphans', '--min-size', '0'], home).catch(() => undefined)
+
+  assert.equal(
+    await fs.access(path.join(home, 'Library', 'Application Support', 'Slack')).then(() => true, () => false),
+    true, '--yes deleted an orphan',
+  )
+})
+
+test('orphans alone exit 2 — nothing was reclaimable', async () => {
+  const home = await orphanHome()
+  const err = await invoke(['--dry-run', 'orphans', '--min-size', '0'], home)
+    .then(() => null, (e: { code?: number }) => e)
+  assert.equal(err?.code, 2, 'orphans-only run should report "nothing reclaimable"')
+})

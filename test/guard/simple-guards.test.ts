@@ -100,9 +100,9 @@ test('blocks a path on another volume', async () => {
   assert.equal((await volumeGuard.check(cand(dir), other)).action, 'block')
 })
 
-test('always blocks the orphans group', async () => {
+test('marks the orphans group report-only, never selectable', async () => {
   const v = await orphanGuard.check(cand('/Users/x/Library/Application Support/Slack', { group: 'orphans' }), ctx)
-  assert.equal(v.action, 'block')
+  assert.equal(v.action, 'report')
   assert.equal((await orphanGuard.check(cand('/Users/x/p/.next'), ctx)).action, 'allow')
 })
 

@@ -5,9 +5,9 @@ import type { Reviewed } from '../../src/types.ts'
 
 function items(): Reviewed[] {
   return [
-    { path: '/h/a/.next', label: '.next', group: 'builds', bytes: 1000, selected: true, warnings: [] },
-    { path: '/h/b/dist', label: 'dist', group: 'builds', bytes: 500, selected: false, warnings: ['tracked in git'] },
-    { path: '/h/.npm/_cacache', label: 'npm cache', group: 'pkg', bytes: 300, selected: true, warnings: [] },
+    { path: '/h/a/.next', label: '.next', group: 'builds', bytes: 1000, selected: true, selectable: true, warnings: [] },
+    { path: '/h/b/dist', label: 'dist', group: 'builds', bytes: 500, selected: false, selectable: true, warnings: ['tracked in git'] },
+    { path: '/h/.npm/_cacache', label: 'npm cache', group: 'pkg', bytes: 300, selected: true, selectable: true, warnings: [] },
   ]
 }
 
@@ -73,4 +73,32 @@ test('an unknown key changes nothing', () => {
   const s1 = reduce(s0, 'z')
   assert.deepEqual(s1.items, s0.items)
   assert.equal(s1.cursor, s0.cursor)
+})
+
+function withOrphan(): Reviewed[] {
+  return [
+    ...items(),
+    { path: '/h/Library/Application Support/Slack', label: 'Slack', group: 'orphans', bytes: 900, selected: false, selectable: false, warnings: ['review manually'] },
+  ]
+}
+
+test('space never toggles a report-only row', () => {
+  let s = initState(withOrphan())
+  // walk the cursor onto the orphan row (last item row)
+  for (let i = 0; i < 10; i++) s = reduce(s, 'down')
+  const orphan = s.items.findIndex((i) => i.group === 'orphans')
+  s = reduce(s, 'space')
+  assert.equal(s.items[orphan]?.selected, false, 'a report-only item was toggled on')
+})
+
+test('select-all never selects a report-only row', () => {
+  const s = reduce(initState(withOrphan()), 'a')
+  const orphan = s.items.find((i) => i.group === 'orphans')
+  assert.equal(orphan?.selected, false, 'select-all checked a report-only item')
+  assert.ok(s.items.filter((i) => i.selectable).every((i) => i.selected), 'select-all missed selectable items')
+})
+
+test('selectedBytes never counts a report-only row', () => {
+  const s = reduce(initState(withOrphan()), 'a')
+  assert.equal(selectedBytes(s), 1800, 'report-only bytes leaked into the selected total')
 })

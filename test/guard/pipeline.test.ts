@@ -72,11 +72,23 @@ test('REGRESSION: a Service Worker directory is never pre-selected', async () =>
   assert.ok(got.warnings.some((w) => /offline app data/.test(w)))
 })
 
-test('drops orphans from the selectable list', async () => {
+test('reports orphans but never makes them selectable', async () => {
   const { home, homeDev } = await realHome()
   const target = path.join(home, 'Library', 'Application Support', 'Slack')
   await fs.mkdir(target, { recursive: true })
 
-  const survivors = await applyGuards([cand(target, { group: 'orphans' })], { home, homeDev, keepGlobs: [], desktopDocsSynced: false })
-  assert.deepEqual(survivors, [])
+  const [got] = await applyGuards([cand(target, { group: 'orphans' })], { home, homeDev, keepGlobs: [], desktopDocsSynced: false })
+  assert.ok(got, 'orphan was dropped instead of reported — the group can never print')
+  assert.equal(got.selectable, false, 'orphan must never be selectable')
+  assert.equal(got.selected, false, 'orphan must never be pre-checked')
+  assert.ok(got.warnings.some((w) => /review manually/.test(w)))
+})
+
+test('a report-only candidate outside home is still blocked', async () => {
+  const { home, homeDev } = await realHome()
+  const survivors = await applyGuards(
+    [cand('/Users/someone-else/Library/Application Support/Slack', { group: 'orphans' })],
+    { home, homeDev, keepGlobs: [], desktopDocsSynced: false },
+  )
+  assert.deepEqual(survivors, [], 'report beat block for a path outside home')
 })

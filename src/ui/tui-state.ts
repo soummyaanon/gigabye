@@ -41,7 +41,7 @@ function step(s: TuiState, dir: 1 | -1): number {
 }
 
 export function selectedBytes(s: TuiState): number {
-  return s.items.filter((i) => i.selected).reduce((n, i) => n + i.bytes, 0)
+  return s.items.filter((i) => i.selected && i.selectable).reduce((n, i) => n + i.bytes, 0)
 }
 
 /** Pure. Never mutates `s` — the tests depend on this. */
@@ -52,12 +52,18 @@ export function reduce(s: TuiState, key: string): TuiState {
     case 'space': {
       const row = s.rows[s.cursor]
       if (row?.kind !== 'item') return s
+      // A report-only row (the orphans group) is shown but never checkable.
+      if (s.items[row.index]?.selectable === false) return s
       const items = s.items.map((it, i) => (i === row.index ? { ...it, selected: !it.selected } : it))
       return { ...s, items }
     }
     case 'a': {
-      const allOn = s.items.every((i) => i.selected)
-      return { ...s, items: s.items.map((i) => ({ ...i, selected: !allOn })) }
+      const selectableItems = s.items.filter((i) => i.selectable)
+      const allOn = selectableItems.length > 0 && selectableItems.every((i) => i.selected)
+      return {
+        ...s,
+        items: s.items.map((i) => (i.selectable ? { ...i, selected: !allOn } : i)),
+      }
     }
     case 'enter': return { ...s, done: 'confirm' }
     case 'q': return { ...s, done: 'quit' }
@@ -87,7 +93,8 @@ export function renderFrame(
     const it = s.items[row.index]
     if (it === undefined) continue
     const here = i === s.cursor
-    const box = it.selected ? '[x]' : '[ ]'
+    // '[-]' marks a row that exists for information only and cannot be checked.
+    const box = !it.selectable ? '[-]' : it.selected ? '[x]' : '[ ]'
     // Same de-duplication as renderReport: a warning that repeats the note
     // verbatim must not print the text twice.
     const note = it.note && !it.warnings.includes(it.note) ? paint('2', `  ${it.note}`) : ''

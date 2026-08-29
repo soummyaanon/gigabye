@@ -17,10 +17,12 @@ const GUARDS: Guard[] = [
 /**
  * Runs every guard over every candidate.
  *
- * Precedence is block > downgrade > allow. A blocked candidate is dropped
- * from the result entirely, so it can never be rendered, never be selected,
- * and never reach the reaper. A downgraded candidate survives but arrives
- * unchecked with its warnings attached.
+ * Precedence is block > report > downgrade > allow. A blocked candidate is
+ * dropped from the result entirely, so it can never be rendered, never be
+ * selected, and never reach the reaper. A report-only candidate is rendered
+ * but arrives with selectable:false, which the TUI and the reaper both
+ * honour. A downgraded candidate survives but arrives unchecked with its
+ * warnings attached.
  */
 export async function applyGuards(cands: Candidate[], ctx: GuardContext): Promise<Reviewed[]> {
   const gitIgnored = await annotateGitStatus(cands)
@@ -29,16 +31,25 @@ export async function applyGuards(cands: Candidate[], ctx: GuardContext): Promis
 
   for (const c of cands) {
     let blocked = false
+    let reportOnly = false
     const warnings: string[] = []
 
     for (const guard of GUARDS) {
       const verdict = await guard.check(c, fullCtx)
+      // block wins outright, and every guard still runs before it, so a
+      // report-only candidate outside home is dropped rather than shown.
       if (verdict.action === 'block') { blocked = true; break }
+      if (verdict.action === 'report') { reportOnly = true; warnings.push(verdict.warning); continue }
       if (verdict.action === 'downgrade') warnings.push(verdict.warning)
     }
 
     if (blocked) continue
-    out.push({ ...c, selected: warnings.length === 0, warnings })
+    out.push({
+      ...c,
+      selectable: !reportOnly,
+      selected: !reportOnly && warnings.length === 0,
+      warnings,
+    })
   }
 
   return out
