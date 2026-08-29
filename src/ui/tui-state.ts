@@ -88,7 +88,9 @@ export function renderFrame(
     if (it === undefined) continue
     const here = i === s.cursor
     const box = it.selected ? '[x]' : '[ ]'
-    const note = it.note ? paint('2', `  ${it.note}`) : ''
+    // Same de-duplication as renderReport: a warning that repeats the note
+    // verbatim must not print the text twice.
+    const note = it.note && !it.warnings.includes(it.note) ? paint('2', `  ${it.note}`) : ''
     const warn = it.warnings.length > 0 ? paint('33', `  ! ${it.warnings.join(', ')}`) : ''
     const text = ` ${box} ${formatBytes(it.bytes).padStart(9)}  ${tildify(it.path, opts.home)}${note}${warn}`
     lines.push(here ? paint('7', text) : text)

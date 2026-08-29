@@ -52,3 +52,21 @@ test('summary states what was reclaimed', () => {
   }
   assert.match(renderSummary(m, NO_COLOR), /6\.1 GB/)
 })
+
+test('does not print a note that a warning already says verbatim', () => {
+  const out = renderReport(
+    [item({ selected: false, note: 'may hold offline app data', warnings: ['may hold offline app data'] })],
+    NO_COLOR,
+  )
+  const hits = out.match(/may hold offline app data/g) ?? []
+  assert.equal(hits.length, 1, `note and warning printed the same text twice: ${out}`)
+})
+
+test('still prints a note that adds information beyond the warning', () => {
+  const out = renderReport(
+    [item({ selected: false, note: 'idle 214d', warnings: ['tracked in git'] })],
+    NO_COLOR,
+  )
+  assert.match(out, /idle 214d/)
+  assert.match(out, /tracked in git/)
+})

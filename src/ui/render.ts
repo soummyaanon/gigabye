@@ -39,7 +39,9 @@ export function renderReport(items: Reviewed[], opts: { color: boolean; home: st
 
     for (const i of inGroup) {
       const box = i.selected ? '[x]' : '[ ]'
-      const note = i.note ? c.dim(`  ${i.note}`) : ''
+      // A guard warning that repeats the scanner note verbatim (Service
+      // Worker says the same thing in both) would otherwise print twice.
+      const note = i.note && !i.warnings.includes(i.note) ? c.dim(`  ${i.note}`) : ''
       const warn = i.warnings.length > 0 ? c.yellow(`  ! ${i.warnings.join(', ')}`) : ''
       lines.push(`  ${box} ${formatBytes(i.bytes).padStart(9)}  ${c.cyan(tildify(i.path, opts.home))}${note}${warn}`)
     }
