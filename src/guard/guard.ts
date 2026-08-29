@@ -14,6 +14,8 @@ export type GuardContext = {
    * ~/Library/Mobile Documents/com~apple~CloudDocs/Desktop.
    */
   desktopDocsSynced: boolean
+  /** Filled in by annotateGitStatus before guards run. Absolute path to "git ignores it". */
+  gitIgnored?: Map<string, boolean>
 }
 
 export type Guard = {
