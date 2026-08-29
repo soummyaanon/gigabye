@@ -1,0 +1,73 @@
+import type { Group, Reviewed, RunManifest } from '../types.ts'
+import { formatBytes } from '../util/bytes.ts'
+
+const HEADERS: Record<Group, string> = {
+  builds: 'BUILD ARTIFACTS',
+  pkg: 'PACKAGE CACHES',
+  xcode: 'XCODE',
+  browsers: 'BROWSER CACHES',
+  editors: 'EDITOR CACHES',
+  orphans: 'ORPHANED APP DATA',
+}
+
+const ORDER: Group[] = ['builds', 'pkg', 'xcode', 'browsers', 'editors', 'orphans']
+
+type Paint = (s: string) => string
+const plain: Paint = (s) => s
+
+function palette(color: boolean) {
+  if (!color) return { bold: plain, dim: plain, cyan: plain, yellow: plain, green: plain }
+  const wrap = (code: string): Paint => (s) => `\x1b[${code}m${s}\x1b[0m`
+  return { bold: wrap('1'), dim: wrap('2'), cyan: wrap('36'), yellow: wrap('33'), green: wrap('32') }
+}
+
+/** Replaces the home prefix with ~ so output is readable and screenshot-safe. */
+export function tildify(p: string, home: string): string {
+  return p.startsWith(home) ? `~${p.slice(home.length)}` : p
+}
+
+export function renderReport(items: Reviewed[], opts: { color: boolean; home: string }): string {
+  const c = palette(opts.color)
+  const lines: string[] = []
+
+  for (const group of ORDER) {
+    const inGroup = items.filter((i) => i.group === group)
+    if (inGroup.length === 0) continue
+
+    const total = inGroup.reduce((n, i) => n + i.bytes, 0)
+    lines.push('', `${c.bold(HEADERS[group])}  ${c.dim(formatBytes(total))}`)
+
+    for (const i of inGroup) {
+      const box = i.selected ? '[x]' : '[ ]'
+      const note = i.note ? c.dim(`  ${i.note}`) : ''
+      const warn = i.warnings.length > 0 ? c.yellow(`  ! ${i.warnings.join(', ')}`) : ''
+      lines.push(`  ${box} ${formatBytes(i.bytes).padStart(9)}  ${c.cyan(tildify(i.path, opts.home))}${note}${warn}`)
+    }
+  }
+
+  const selected = items.filter((i) => i.selected).reduce((n, i) => n + i.bytes, 0)
+  lines.push('', c.bold(`reclaimable: ${formatBytes(selected)}`))
+  return lines.join('\n')
+}
+
+export function renderJson(items: Reviewed[]): string {
+  return JSON.stringify(
+    {
+      reclaimableBytes: items.filter((i) => i.selected).reduce((n, i) => n + i.bytes, 0),
+      items: items.map((i) => ({
+        path: i.path, bytes: i.bytes, group: i.group,
+        selected: i.selected, warnings: i.warnings,
+      })),
+    },
+    null, 2,
+  )
+}
+
+export function renderSummary(m: RunManifest, opts: { color: boolean }): string {
+  const c = palette(opts.color)
+  return [
+    '',
+    c.green(c.bold(`reclaimed: ${formatBytes(m.freedBytes)}`)),
+    c.dim('restart any browser or editor that was running.'),
+  ].join('\n')
+}
