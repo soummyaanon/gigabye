@@ -1,0 +1,30 @@
+import path from 'node:path'
+import { exists } from '../util/exists.ts'
+import type { PathScanner, RawCandidate } from './scanner.ts'
+
+/** Relative to home → label. Every one of these is re-downloaded on demand. */
+const CACHES: Array<[string, string]> = [
+  ['.npm/_cacache', 'npm cache'],
+  ['.bun/install/cache', 'bun cache'],
+  ['Library/Caches/ms-playwright', 'playwright browsers'],
+  ['Library/Caches/electron', 'electron downloads'],
+  ['Library/Caches/node-gyp', 'node-gyp headers'],
+  ['Library/Caches/Homebrew', 'homebrew cache'],
+  ['Library/Caches/Yarn', 'yarn cache'],
+  ['Library/Caches/deno', 'deno cache'],
+  ['.cargo/registry/cache', 'cargo registry cache'],
+  ['.gradle/caches', 'gradle cache'],
+]
+
+export const pkgCacheScanner: PathScanner = {
+  name: 'pkg-cache',
+  group: 'pkg',
+  async probe(ctx) {
+    const out: RawCandidate[] = []
+    for (const [rel, label] of CACHES) {
+      const full = path.join(ctx.home, rel)
+      if (await exists(full)) out.push({ path: full, label, group: 'pkg' })
+    }
+    return out
+  },
+}
