@@ -1,0 +1,26 @@
+{
+  "name": "gigabye",
+  "version": "0.1.0",
+  "description": "Say gigabye to the build junk on your Mac.",
+  "type": "module",
+  "bin": { "gigabye": "./dist/gigabye.js" },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=22.18" },
+  "os": ["darwin"],
+  "license": "MIT",
+  "author": "soummyaanon",
+  "repository": { "type": "git", "url": "git+https://github.com/soummyaanon/gigabye.git" },
+  "keywords": ["macos", "disk", "cleanup", "node_modules", "cache", "cli"],
+  "scripts": {
+    "test": "node --test 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/cli.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/gigabye.js --banner:js='#!/usr/bin/env node'",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0"
+  }
+}

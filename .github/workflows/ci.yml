@@ -1,0 +1,56 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        node: ['22.18', '24', '26']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: only the reaper may delete
+        run: |
+          hits=$(grep -rnE 'fs\.(rm|rmdir|unlink)' src/ \
+                 --include='*.ts' | grep -v '^src/reap/reaper.ts:' || true)
+          if [ -n "$hits" ]; then
+            echo "Deletion outside src/reap/reaper.ts:"
+            echo "$hits"
+            exit 1
+          fi
+
+      - name: zero runtime dependencies
+        run: |
+          deps=$(node -p "JSON.stringify(require('./package.json').dependencies || {})")
+          if [ "$deps" != "{}" ]; then
+            echo "gigabye must have no runtime dependencies, found: $deps"
+            exit 1
+          fi
+
+      - name: sizes must come from allocated blocks
+        run: |
+          # Strip line comments and block-comment bodies first: du.ts carries a
+          # comment explaining why stat.size is wrong, and that must not trip
+          # the check that stat.size is never USED.
+          code=$(sed -E 's://.*::' src/util/du.ts | grep -vE '^[[:space:]]*(\*|/\*)')
+          if printf '%s\n' "$code" | grep -nE '\.size\b'; then
+            echo "du.ts must measure stat.blocks * 512, never stat.size"
+            exit 1
+          fi
+          if ! printf '%s\n' "$code" | grep -q 'blocks \* 512'; then
+            echo "du.ts must measure stat.blocks * 512 and does not"
+            exit 1
+          fi
