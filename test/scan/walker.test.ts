@@ -88,3 +88,14 @@ test('survives an unreadable directory', async () => {
   await fs.chmod(path.join(root, 'locked'), 0o755)
   assert.ok(seen.includes('fine'))
 })
+
+test('exposes the parent directory entry names', async () => {
+  const root = await tree(['proj/dist'])
+  await fs.writeFile(path.join(root, 'proj', 'package.json'), '{}')
+  let parentEntries: string[] = []
+  await walk(root, (v) => {
+    if (v.name === 'dist') parentEntries = [...v.parentEntries].sort()
+    return { prune: false }
+  })
+  assert.deepEqual(parentEntries, ['dist', 'package.json'])
+})

@@ -10,6 +10,8 @@ export type DirVisit = {
   parent: string
   /** Names of the directory's immediate children, files and dirs alike. */
   entries: string[]
+  /** Names of the *parent* directory's children. Lets a scanner check for a sibling manifest. */
+  parentEntries: string[]
 }
 
 export type VisitResult = {
@@ -55,10 +57,10 @@ export async function walk(
   onDir: (v: DirVisit) => VisitResult | Promise<VisitResult>,
   opts: WalkOptions = {},
 ): Promise<void> {
-  const queue: string[] = [root]
+  const queue: Array<{ dir: string; parentEntries: string[] }> = [{ dir: root, parentEntries: [] }]
 
   while (queue.length > 0) {
-    const dir = queue.pop() as string
+    const { dir, parentEntries } = queue.pop() as { dir: string; parentEntries: string[] }
 
     let dirents
     try {
@@ -71,7 +73,7 @@ export async function walk(
     const name = path.basename(dir)
 
     if (dir !== root) {
-      const result = await onDir({ path: dir, name, parent: path.dirname(dir), entries })
+      const result = await onDir({ path: dir, name, parent: path.dirname(dir), entries, parentEntries })
       if (result.prune) continue
       // Visited so a scanner could claim it, but its contents are off-limits.
       if (NEVER_DESCEND.has(name)) continue
@@ -84,7 +86,7 @@ export async function walk(
       if (NEVER_VISIT.has(d.name)) continue
       const full = path.join(dir, d.name)
       if (opts.skip?.(full, d.name) === true) continue
-      queue.push(full)
+      queue.push({ dir: full, parentEntries: entries })
     }
   }
 }
