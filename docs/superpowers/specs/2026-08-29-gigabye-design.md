@@ -77,11 +77,12 @@ as selectable) or **downgrade** (shown, unchecked, with a visible warning).
 |---|---|---|
 | Path outside `$HOME` | block | inherited from diskdiet |
 | Tracked in git | downgrade + `! tracked in git` | committed `dist/` data loss |
-| Inside iCloud / Dropbox / Google Drive sync root | downgrade + warn | delete propagates to other machines |
+| Inside a cloud sync root | downgrade + warn | delete propagates to other machines |
 | External or network volume | block | not the user's boot disk |
 | Symlink | block | never follow, never delete the target |
 | Browser `Service Worker` | downgrade + warn | real PWA offline data |
-| Matches `keep:` glob in `~/.gigabyerc` | block | user escape hatch |
+| `*/{iOS,watchOS,tvOS,visionOS} DeviceSupport` | downgrade + warn | needs the original device on the original OS build |
+| Matches `keep:` glob in `~/.gigabyerc` | block | user escape hatch (globs are `~`-expanded at load) |
 | Below `--min-size` (default 10 MB) | hidden | noise |
 
 Git status is resolved by grouping candidates per repository root and batching
@@ -104,8 +105,8 @@ Six groups. Five are ported from `diskdiet`; `xcode` is new, and on a typical
 Mac dev machine it is the single largest reclaim.
 
 1. `builds` — framework output, cargo `target/`, python venvs, stale `node_modules`
-2. `pkg` — download caches, plus delegated `pnpm store prune` / `brew cleanup`
-3. `xcode` — DerivedData, iOS DeviceSupport, unavailable simulators
+2. `pkg` — download caches
+3. `xcode` — DerivedData, device support, simulator caches
    (Xcode **Archives are never touched** — they are shipping artifacts)
 4. `browsers` — GPUCache, on-device AI models, service workers (downgraded)
 5. `editors` — Cursor / VS Code / Windsurf / VSCodium caches
@@ -116,6 +117,21 @@ macOS only in v1. On other platforms the CLI exits with a clear message.
 Explicitly **not** in v1: Docker/OrbStack disk images, generic
 `~/Library/Caches` sweeps, Time Machine local snapshots, anything requiring
 `sudo`, telemetry of any kind.
+
+**Delegated shell commands are deferred to v1.1** — `pnpm store prune`,
+`brew cleanup --prune=all` and `xcrun simctl delete unavailable`. They cannot
+be sized before running and cannot be shown as reviewable paths, so they do
+not fit the "review a list of sized paths, then delete" model. Keeping them
+out means the reaper stays the only thing in the codebase with destructive
+power.
+
+**The walk excludes `~/Library`, `~/Applications`, `~/Pictures`, `~/Music`,
+`~/Movies` and editor dot-directories, and never descends into
+`node_modules`.** `diskdiet` carried these as `-not -path` exclusions. They are
+load-bearing: without the `node_modules` rule, an *active* project's
+`node_modules` is correctly not claimed, therefore not pruned, therefore
+walked — and the `builds` scanner then claims `node_modules/next/dist` and
+every other dependency shipping a `dist/` beside its `package.json`.
 
 ## 4. CLI surface
 
@@ -177,7 +193,12 @@ Uses the built-in `node:test` runner — no test framework dependency.
 - **The invariant test** — gigabye never deletes anything outside `$HOME`.
   This test must never be weakened.
 
-CI on GitHub Actions, `macos-latest`, Node 20 / 22 / 24.
+CI on GitHub Actions, `macos-latest`, Node 22.18 / 24 / 26. Node 20 cannot
+run the test suite: it has no native TypeScript type stripping.
+
+CI additionally enforces three invariants by grep: only `src/reap/reaper.ts`
+may call `fs.rm`, `dependencies` must stay empty, and `du.ts` must measure
+`stat.blocks`, never `stat.size`.
 
 ## 7. Release
 
@@ -186,9 +207,11 @@ CI on GitHub Actions, `macos-latest`, Node 20 / 22 / 24.
 - `LICENSE` — MIT.
 - `README.md` — the pitch, one demo GIF, and a prominent safety section stating
   exactly what gigabye will and will not touch, plus a "no telemetry" line.
-- Register `gigabyte` on npm as a typo-redirect package pointing at `gigabye`.
+- A `gigabyte` typo-redirect package is **not** available: the name was
+  unpublished in 2016, and npm restricts republishing unpublished names
+  without support intervention.
 
 ## 8. Open questions
 
 None blocking. Deferred until after launch: Homebrew tap, Linux support,
-a shareable PNG receipt of a run.
+delegated shell commands (see §3), a shareable PNG receipt of a run.
