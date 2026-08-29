@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Say gigabye to the build junk on your Mac.",
   "type": "module",
-  "bin": { "gigabye": "./dist/gigabye.js" },
+  "bin": { "gigabye": "dist/gigabye.js" },
   "files": ["dist", "README.md", "LICENSE"],
   "engines": { "node": ">=22.18" },
   "os": ["darwin"],
