@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [semver](https://semver.org).
 
+## [0.7.0] - 2026-08-30
+
+### Changed
+- The `orphans` and `heavy` groups are deletable — by explicit, per-row
+  opt-in. Until now they were report-only: purge showed you 70 GB of
+  Docker.raw and refused to help. Each row now arrives unchecked with a
+  warning naming exactly what the loss is ("a device backup — deleting it
+  is permanent", "destroys all Docker containers, images & volumes — quit
+  Docker Desktop first"), and can be checked in the review screen. The
+  friction is kept where it matters: select-all and the group checkbox pass
+  over these rows, they are never pre-checked, `--yes` never deletes one,
+  and the reaper still refuses any row whose warning the user was not shown.
+- `--json` output gains a `dangerous` field per item.
+
 ## [0.6.1] - 2026-08-30
 
 ### Fixed

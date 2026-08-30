@@ -30,6 +30,12 @@ export type Candidate = {
 export type Verdict =
   | { action: 'allow' }
   | { action: 'downgrade'; warning: string }
+  /**
+   * Deleting this destroys real, non-regenerable data (an iOS backup, an
+   * uninstalled app's settings). Arrives unchecked and is skipped by every
+   * bulk toggle — only checking the row itself opts in.
+   */
+  | { action: 'danger'; warning: string }
   /** Shown in the report, never selectable, never deletable. */
   | { action: 'report'; warning: string }
   | { action: 'block'; warning: string }
@@ -41,10 +47,15 @@ export type Reviewed = Candidate & {
   /**
    * False when a guard returned 'report': the row is displayed so the user
    * knows the data exists, but it can never be checked and the reaper
-   * refuses it outright. This is what makes the `orphans` group visible
-   * without ever being deletable.
+   * refuses it outright.
    */
   selectable: boolean
+  /**
+   * True when a guard returned 'danger'. The row can be checked, but only
+   * one at a time by the user's own hand: select-all and the group checkbox
+   * pass over it, and it is never pre-checked. Absent means false.
+   */
+  dangerous?: boolean
   /** Shown beside the row. Empty when no guard objected. */
   warnings: string[]
 }

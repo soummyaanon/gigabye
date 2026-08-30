@@ -30,8 +30,8 @@ GROUPS (default: all)
   editors    Cursor, VS Code, Windsurf and Zed caches
   agents     Claude, Codex, Cursor, Gemini, Copilot, opencode, aider junk
   logs       per-app folders in ~/Library/Logs
-  orphans    app data whose app is gone (report only, never deleted)
-  heavy      iOS backups, Trash, Docker.raw (report only, never deleted)
+  orphans    app data whose app is gone (unchecked — check a row to opt in)
+  heavy      iOS backups, Trash, Docker.raw (unchecked — check a row to opt in)
 
 OPTIONS
   -y, --yes           delete without the review screen
@@ -146,9 +146,10 @@ async function main(argv: string[]): Promise<number> {
     return 2
   }
 
-  // Report-only rows (the orphans and heavy groups) are shown but can never be deleted,
-  // so a run that found nothing else has still reclaimed nothing: print the
-  // report so the user sees the orphans, then exit 2.
+  // Report-only rows are shown but can never be deleted, so a run that found
+  // nothing else has still reclaimed nothing: print the report, then exit 2.
+  // (Dangerous rows — orphans, heavy — count as selectable: the review
+  // screen is exactly where the user opts in to those.)
   const anySelectable = reviewed.some((r) => r.selectable)
 
   if (opts.json) { process.stdout.write(`${renderJson(reviewed)}\n`); return anySelectable ? 0 : 2 }

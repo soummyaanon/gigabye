@@ -71,17 +71,19 @@ test('still prints a note that adds information beyond the warning', () => {
   assert.match(out, /tracked in git/)
 })
 
-test('renders report-only items in their own section, outside the reclaimable total', () => {
+test('renders dangerous items unchecked, outside the reclaimable total', () => {
   const out = renderReport(
     [
       item(),
       item({ path: '/Users/x/Library/Application Support/Slack', label: 'Slack', group: 'orphans',
-             bytes: 500_000_000, selected: false, selectable: false, warnings: ['review manually'] }),
+             bytes: 500_000_000, selected: false, selectable: true, dangerous: true,
+             warnings: ['not regenerable'] }),
     ],
     NO_COLOR,
   )
   assert.match(out, /ORPHANED APP DATA/)
-  assert.match(out, /Slack/)
+  assert.match(out, /\[ \].+Slack/, 'a dangerous row must show an empty checkbox, not [-]')
+  assert.match(out, /not regenerable/)
   // 1_181_116_006 alone is 1.1 GB; adding the 500 MB orphan would read 1.6 GB.
   assert.match(out, /reclaimable: 1\.1 GB/)
 })

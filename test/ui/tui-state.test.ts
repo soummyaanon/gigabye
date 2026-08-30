@@ -79,29 +79,37 @@ test('an unknown key changes nothing', () => {
 function withOrphan(): Reviewed[] {
   return [
     ...items(),
-    { path: '/h/Library/Application Support/Slack', label: 'Slack', group: 'orphans', bytes: 900, selected: false, selectable: false, warnings: ['review manually'] },
+    { path: '/h/Library/Application Support/Slack', label: 'Slack', group: 'orphans', bytes: 900, selected: false, selectable: true, dangerous: true, warnings: ['not regenerable'] },
   ]
 }
 
-test('space never toggles a report-only row', () => {
+test('space toggles a dangerous row — on the row itself, the user may opt in', () => {
   let s = initState(withOrphan())
   // walk the cursor onto the orphan row (last item row)
   for (let i = 0; i < 10; i++) s = reduce(s, 'down')
   const orphan = s.items.findIndex((i) => i.group === 'orphans')
   s = reduce(s, 'space')
-  assert.equal(s.items[orphan]?.selected, false, 'a report-only item was toggled on')
+  assert.equal(s.items[orphan]?.selected, true, 'checking a dangerous row on the row itself must work')
+  s = reduce(s, 'space')
+  assert.equal(s.items[orphan]?.selected, false, 'a second space must uncheck it again')
 })
 
-test('select-all never selects a report-only row', () => {
+test('select-all never sweeps up a dangerous row', () => {
   const s = reduce(initState(withOrphan()), 'a')
   const orphan = s.items.find((i) => i.group === 'orphans')
-  assert.equal(orphan?.selected, false, 'select-all checked a report-only item')
-  assert.ok(s.items.filter((i) => i.selectable).every((i) => i.selected), 'select-all missed selectable items')
+  assert.equal(orphan?.selected, false, 'select-all checked a dangerous item')
+  assert.ok(
+    s.items.filter((i) => i.selectable && i.dangerous !== true).every((i) => i.selected),
+    'select-all missed selectable items',
+  )
 })
 
-test('selectedBytes never counts a report-only row', () => {
-  const s = reduce(initState(withOrphan()), 'a')
-  assert.equal(selectedBytes(s), 1800, 'report-only bytes leaked into the selected total')
+test('selectedBytes counts a dangerous row only once the user checks it', () => {
+  let s = reduce(initState(withOrphan()), 'a')
+  assert.equal(selectedBytes(s), 1800, 'unchecked dangerous bytes leaked into the selected total')
+  for (let i = 0; i < 10; i++) s = reduce(s, 'down')
+  s = reduce(s, 'space')
+  assert.equal(selectedBytes(s), 2700, 'an explicitly checked dangerous row must count')
 })
 
 test('space on a header toggles the whole group', () => {

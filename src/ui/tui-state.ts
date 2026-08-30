@@ -80,10 +80,16 @@ export function selectedBytes(s: TuiState): number {
   return s.items.filter((i) => i.selected && i.selectable).reduce((n, i) => n + i.bytes, 0)
 }
 
-/** Every selectable item the current filter lets through. */
-function visibleSelectable(s: TuiState, group?: Group): Reviewed[] {
+/**
+ * Every item a bulk toggle (select-all, the group checkbox) may touch:
+ * selectable, not dangerous, and let through by the current filter. A
+ * dangerous row (orphans, heavy) can only be checked one at a time, on the
+ * row itself — never swept up by `a` or a header press.
+ */
+function bulkToggleable(s: TuiState, group?: Group): Reviewed[] {
   return s.items.filter(
-    (i) => i.selectable && matches(i, s.filter) && (group === undefined || i.group === group),
+    (i) => i.selectable && i.dangerous !== true && matches(i, s.filter)
+      && (group === undefined || i.group === group),
   )
 }
 
@@ -120,21 +126,22 @@ export function reduce(s: TuiState, key: string): TuiState {
       const row = s.rows[s.cursor]
       if (row === undefined) return s
       if (row.kind === 'header') {
-        const inGroup = visibleSelectable(s, row.group)
-        if (inGroup.length === 0) return s // report-only groups have nothing to toggle
+        const inGroup = bulkToggleable(s, row.group)
+        if (inGroup.length === 0) return s // all-dangerous groups have no bulk toggle
         const allOn = inGroup.every((i) => i.selected)
-        return setSelected(s, (it) => it.group === row.group && it.selectable && matches(it, s.filter), !allOn)
+        return setSelected(s, (it) => it.group === row.group && it.selectable && it.dangerous !== true && matches(it, s.filter), !allOn)
       }
-      // A report-only row (orphans, heavy) is shown but never checkable.
+      // A report-only row is shown but never checkable. A dangerous row
+      // (orphans, heavy) IS checkable — here, on the row itself, and only here.
       if (s.items[row.index]?.selectable === false) return s
       const items = s.items.map((it, i) => (i === row.index ? { ...it, selected: !it.selected } : it))
       return { ...s, items }
     }
 
     case 'a': {
-      const visible = visibleSelectable(s)
+      const visible = bulkToggleable(s)
       const allOn = visible.length > 0 && visible.every((i) => i.selected)
-      return setSelected(s, (it) => it.selectable && matches(it, s.filter), !allOn)
+      return setSelected(s, (it) => it.selectable && it.dangerous !== true && matches(it, s.filter), !allOn)
     }
 
     case 'fold': case 'unfold': {
@@ -209,8 +216,10 @@ export function renderFrame(
     if (row.kind === 'header') {
       const mark = s.collapsed.includes(row.group) ? '▸' : '▾'
       // The header carries the group's aggregate checkbox so that toggling a
-      // group — a folded one especially — has visible feedback.
-      const inGroup = s.items.filter((it) => it.group === row.group && it.selectable && matches(it, s.filter))
+      // group — a folded one especially — has visible feedback. It reflects
+      // only what space would toggle here, so an all-dangerous group shows
+      // '[-]' even while a row inside it is individually checked.
+      const inGroup = bulkToggleable(s, row.group)
       const on = inGroup.filter((it) => it.selected).length
       const box = inGroup.length === 0 ? '[-]' : on === 0 ? '[ ]' : on === inGroup.length ? '[x]' : '[~]'
       const text = `${mark} ${box} ${HEADERS[row.group]}  ${formatBytes(row.bytes)} (${row.count})`

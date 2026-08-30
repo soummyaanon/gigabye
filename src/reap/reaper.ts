@@ -25,9 +25,11 @@ export async function reap(
     onProgress?: (freedBytes: number, totalBytes: number) => void
   },
 ): Promise<RunManifest> {
-  // selectable:false means a guard returned 'report' — the orphans group.
-  // Filtered here AND re-checked against the fresh verdict below, so a
-  // caller that forged selected:true still cannot delete one.
+  // selectable:false means a guard returned 'report'. Filtered here AND
+  // re-checked against the fresh verdict below, so a caller that forged
+  // selected:true still cannot delete one. A dangerous row (orphans, heavy)
+  // passes — but only when its exact warning was shown to the user, which
+  // the known-warnings check below enforces.
   const wanted = items.filter((i) => i.selected && i.selectable)
 
   // What each item was already warned about when the user chose it.

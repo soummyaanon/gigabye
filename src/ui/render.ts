@@ -67,7 +67,8 @@ export function renderJson(items: Reviewed[]): string {
         .reduce((n, i) => n + i.bytes, 0),
       items: items.map((i) => ({
         path: i.path, bytes: i.bytes, group: i.group,
-        selected: i.selected, selectable: i.selectable, warnings: i.warnings,
+        selected: i.selected, selectable: i.selectable,
+        dangerous: i.dangerous === true, warnings: i.warnings,
       })),
     },
     null, 2,

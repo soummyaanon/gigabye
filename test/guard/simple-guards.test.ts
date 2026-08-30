@@ -7,7 +7,7 @@ import { homeGuard } from '../../src/guard/home.ts'
 import { symlinkGuard } from '../../src/guard/symlink.ts'
 import { syncRootsGuard } from '../../src/guard/sync-roots.ts'
 import { keepGuard, matchGlob } from '../../src/guard/keep.ts'
-import { reportOnlyGuard } from '../../src/guard/report-only.ts'
+import { dangerGuard } from '../../src/guard/danger.ts'
 import { fragileGuard } from '../../src/guard/fragile.ts'
 import { volumeGuard } from '../../src/guard/volume.ts'
 import type { GuardContext } from '../../src/guard/guard.ts'
@@ -108,15 +108,22 @@ test('blocks a path on another volume', async () => {
   assert.equal((await volumeGuard.check(cand(dir), other)).action, 'block')
 })
 
-test('marks the orphans group report-only, never selectable', async () => {
-  const v = await reportOnlyGuard.check(cand('/Users/x/Library/Application Support/Slack', { group: 'orphans' }), ctx)
-  assert.equal(v.action, 'report')
-  assert.equal((await reportOnlyGuard.check(cand('/Users/x/p/.next'), ctx)).action, 'allow')
+test('marks the orphans group dangerous, opt-in only', async () => {
+  const v = await dangerGuard.check(cand('/Users/x/Library/Application Support/Slack', { group: 'orphans' }), ctx)
+  assert.equal(v.action, 'danger')
+  assert.match(v.action === 'danger' ? v.warning : '', /not regenerable/)
+  assert.equal((await dangerGuard.check(cand('/Users/x/p/.next'), ctx)).action, 'allow')
 })
 
-test('marks the heavy group report-only, never selectable', async () => {
-  const v = await reportOnlyGuard.check(cand('/Users/x/.Trash', { group: 'heavy' }), ctx)
-  assert.equal(v.action, 'report')
+test('marks the heavy group dangerous with a warning naming the loss', async () => {
+  const trash = await dangerGuard.check(cand('/Users/x/.Trash', { group: 'heavy', label: '.Trash' }), ctx)
+  assert.equal(trash.action, 'danger')
+
+  const docker = await dangerGuard.check(cand('/Users/x/L/Docker.raw', { group: 'heavy', label: 'Docker.raw' }), ctx)
+  assert.match(docker.action === 'danger' ? docker.warning : '', /containers/)
+
+  const backup = await dangerGuard.check(cand('/Users/x/L/Backup/abc', { group: 'heavy', label: 'iOS backup abc' }), ctx)
+  assert.match(backup.action === 'danger' ? backup.warning : '', /device backup/)
 })
 
 test('downgrades iCloud-backed caches', async () => {

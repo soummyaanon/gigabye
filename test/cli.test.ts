@@ -93,13 +93,13 @@ async function orphanHome(): Promise<string> {
 
 test('reports orphaned app data instead of silently finding nothing', async () => {
   const home = await orphanHome()
-  // Nothing is reclaimable, so the exit code is 2 and execFile rejects.
   const res = await invoke(['--dry-run', 'orphans', '--min-size', '0'], home)
     .catch((e: { code?: number; stdout?: string }) => e)
   const stdout = (res as { stdout?: string }).stdout ?? ''
 
   assert.match(stdout, /ORPHANED APP DATA/, `orphans group printed nothing: ${stdout}`)
   assert.match(stdout, /Slack/)
+  assert.match(stdout, /not regenerable/, 'the danger warning must be visible in the report')
   assert.equal(
     await fs.access(path.join(home, 'Library', 'Application Support', 'Slack')).then(() => true, () => false),
     true, 'orphan data was deleted',
@@ -116,9 +116,10 @@ test('--yes never deletes orphaned app data', async () => {
   )
 })
 
-test('orphans alone exit 2 — nothing was reclaimable', async () => {
+test('orphans alone exit 0 — reclaimable through the review screen', async () => {
   const home = await orphanHome()
-  const err = await invoke(['--dry-run', 'orphans', '--min-size', '0'], home)
-    .then(() => null, (e: { code?: number }) => e)
-  assert.equal(err?.code, 2, 'orphans-only run should report "nothing reclaimable"')
+  // Dangerous rows are unchecked but checkable, so the run points the user
+  // at the review screen instead of declaring nothing reclaimable.
+  const { stdout } = await invoke(['--dry-run', 'orphans', '--min-size', '0'], home)
+  assert.match(stdout, /run `purge` to pick what to delete/)
 })

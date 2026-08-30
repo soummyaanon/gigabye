@@ -5,13 +5,13 @@ import { symlinkGuard } from './symlink.ts'
 import { volumeGuard } from './volume.ts'
 import { syncRootsGuard } from './sync-roots.ts'
 import { keepGuard } from './keep.ts'
-import { reportOnlyGuard } from './report-only.ts'
+import { dangerGuard } from './danger.ts'
 import { fragileGuard } from './fragile.ts'
 import { gitGuard, annotateGitStatus } from './git.ts'
 
 /** Cheap, path-only guards run first so the expensive ones see fewer candidates. */
 const GUARDS: Guard[] = [
-  homeGuard, keepGuard, reportOnlyGuard, syncRootsGuard, fragileGuard, symlinkGuard, volumeGuard, gitGuard,
+  homeGuard, keepGuard, dangerGuard, syncRootsGuard, fragileGuard, symlinkGuard, volumeGuard, gitGuard,
 ]
 
 /**
@@ -32,14 +32,17 @@ export async function applyGuards(cands: Candidate[], ctx: GuardContext): Promis
   for (const c of cands) {
     let blocked = false
     let reportOnly = false
+    let dangerous = false
     const warnings: string[] = []
 
     for (const guard of GUARDS) {
       const verdict = await guard.check(c, fullCtx)
       // block wins outright, and every guard still runs before it, so a
-      // report-only candidate outside home is dropped rather than shown.
+      // report-only or dangerous candidate outside home is dropped rather
+      // than shown.
       if (verdict.action === 'block') { blocked = true; break }
       if (verdict.action === 'report') { reportOnly = true; warnings.push(verdict.warning); continue }
+      if (verdict.action === 'danger') { dangerous = true; warnings.push(verdict.warning); continue }
       if (verdict.action === 'downgrade') warnings.push(verdict.warning)
     }
 
@@ -48,6 +51,7 @@ export async function applyGuards(cands: Candidate[], ctx: GuardContext): Promis
       ...c,
       selectable: !reportOnly,
       selected: !reportOnly && warnings.length === 0,
+      ...(dangerous ? { dangerous: true } : {}),
       warnings,
     })
   }

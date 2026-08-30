@@ -52,8 +52,8 @@ sized, and deletes only what you leave checked.
 | `editors` | Cursor, VS Code, Windsurf, Zed caches |
 | `agents` | Claude, Codex, Cursor, Gemini, Copilot, opencode, aider — caches, logs, scratchpads |
 | `logs` | per-app folders in `~/Library/Logs` |
-| `orphans` | app data whose app is gone — reported, never deleted |
-| `heavy` | old iOS backups, `~/.Trash`, `Docker.raw` — reported, never deleted |
+| `orphans` | app data whose app is gone — unchecked, opt in per row to delete |
+| `heavy` | old iOS backups, `~/.Trash`, `Docker.raw` — unchecked, opt in per row to delete |
 
 Narrow it: `purge builds xcode`
 
@@ -82,9 +82,13 @@ purge will **never**:
   always shown unchecked with a warning
 - follow or delete a symlink
 - touch a file on an external or network volume
-- delete anything in the `orphans` or `heavy` groups
 - delete agent configs, credentials, installed extensions, editor settings,
   browser profiles, passwords, bookmarks, history, or Xcode Archives
+- pre-check, bulk-select, or `--yes`-delete anything in the `orphans` or
+  `heavy` groups — those rows are real, non-regenerable data (an iOS backup,
+  an uninstalled app's settings, Docker's disk). Each one must be checked
+  individually in the review screen, past a warning naming exactly what
+  the loss is; `a` and the group checkbox pass over them
 
 purge leaves **unchecked**, with a visible warning, anything that is:
 

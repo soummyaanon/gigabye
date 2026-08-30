@@ -5,9 +5,9 @@ import { subdirNames } from './enumerate.ts'
 
 /**
  * Things that are huge but NOT regenerable junk: device backups, the Trash,
- * Docker's VM disk. The whole group is report-only (the report-only guard
- * enforces it) — these rows exist so the user learns where the space went,
- * with a note saying which tool actually reclaims it.
+ * Docker's VM disk. The danger guard marks every row here dangerous — shown
+ * unchecked with a warning naming the loss, deletable only by checking the
+ * row itself. The note says which native tool reclaims the space gently.
  */
 export const heavyScanner: PathScanner = {
   name: 'heavy',

@@ -7,6 +7,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { reap } from '../../src/reap/reaper.ts'
 import { readManifests } from '../../src/reap/manifest.ts'
+import { applyGuards } from '../../src/guard/index.ts'
 import type { Reviewed } from '../../src/types.ts'
 
 const run = promisify(execFile)
@@ -125,30 +126,31 @@ test('readManifests returns an empty list when no runs exist', async () => {
   assert.deepEqual(await readManifests(runsDir), [])
 })
 
-test('SAFETY: refuses a report-only item even when handed one marked selected', async () => {
+test('SAFETY: refuses an orphan whose danger warning the user was never shown', async () => {
   const { home, ctx, runsDir } = await sandbox()
   const target = path.join(home, 'Library', 'Application Support', 'Slack')
   await fs.mkdir(target, { recursive: true })
   await fs.writeFile(path.join(target, 'data.bin'), 'x')
 
-  // A caller that ignored `selectable` and forced selected:true. The reaper
-  // must still refuse: orphans are never deleted, by design.
+  // A caller that forged selected:true without carrying the danger warning
+  // the guards attach. The fresh verdict's warning is then an objection the
+  // user never saw, and the reaper must skip it.
   const forced: Reviewed = {
     path: target, label: 'Slack', group: 'orphans', bytes: 4096,
     selected: true, selectable: true, warnings: [],
   }
   const m = await reap([forced], ctx, OPTS(runsDir))
 
-  assert.equal(m.items.length, 0, 'reaper deleted an orphan')
+  assert.equal(m.items.length, 0, 'reaper deleted an orphan the user never saw a warning for')
   assert.equal(await fs.access(target).then(() => true, () => false), true, 'orphan data was deleted')
 })
 
-test('SAFETY: refuses an item the guards now mark report-only', async () => {
+test('SAFETY: refuses an item handed in as report-only', async () => {
   const { home, ctx, runsDir } = await sandbox()
   const target = path.join(home, 'Library', 'Application Support', 'Discord')
   await fs.mkdir(target, { recursive: true })
 
-  // selectable:false is what applyGuards produces for the orphans group.
+  // selectable:false is what applyGuards produces for a 'report' verdict.
   const item: Reviewed = {
     path: target, label: 'Discord', group: 'orphans', bytes: 4096,
     selected: true, selectable: false, warnings: ['review manually'],
@@ -157,6 +159,25 @@ test('SAFETY: refuses an item the guards now mark report-only', async () => {
 
   assert.equal(m.items.length, 0)
   assert.equal(await fs.access(target).then(() => true, () => false), true)
+})
+
+test('deletes an orphan the user explicitly checked, warning seen', async () => {
+  const { home, ctx, runsDir } = await sandbox()
+  const target = path.join(home, 'Library', 'Application Support', 'Slack')
+  await fs.mkdir(target, { recursive: true })
+  await fs.writeFile(path.join(target, 'data.bin'), 'x')
+
+  // What the TUI hands over after the user checks the row: the danger
+  // warning it displayed rides along, so the fresh verdict matches.
+  const [shown] = await applyGuards(
+    [{ path: target, label: 'Slack', group: 'orphans', bytes: 4096 }], ctx,
+  )
+  assert.ok(shown)
+  assert.equal(shown.dangerous, true)
+  const m = await reap([{ ...shown, selected: true }], ctx, OPTS(runsDir))
+
+  assert.equal(m.items.length, 1, 'an explicit, informed opt-in must be honoured')
+  assert.equal(await fs.access(target).then(() => true, () => false), false, 'orphan data still exists')
 })
 
 test('reports freed bytes as it deletes', async () => {
