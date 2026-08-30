@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [semver](https://semver.org).
 
+## [0.6.1] - 2026-08-30
+
+### Fixed
+- `--version` (and the banner) reported a stale hardcoded version; it now
+  reads from `package.json`, so it can never drift again.
+- Added a `purge-cli` bin alias. On Macs where the npm bin directory sits
+  after `/usr/sbin` in `PATH`, typing `purge` ran macOS's own disk-buffer
+  purge tool ("Unable to purge disk buffers: Operation not permitted");
+  `purge-cli` always resolves to this tool.
+
 ## [0.6.0] - 2026-08-30
 
 ### Added

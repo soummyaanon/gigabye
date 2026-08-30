@@ -19,8 +19,14 @@
 
 ```
 npm i -g purge-cli     # or: npx purge-cli
-purge
+purge                  # or: purge-cli
 ```
+
+> **Heads up:** macOS ships its own `/usr/sbin/purge` (it flushes disk
+> buffers and prints `Unable to purge disk buffers: Operation not
+> permitted` without sudo). If typing `purge` hits that instead of this
+> tool, your npm bin directory comes after `/usr/sbin` in `PATH` — run
+> `purge-cli`, which never collides.
 
 Build output from projects you abandoned last year. Xcode DerivedData
 nobody asked for. Every app's cache folder, coding-agent scratch data,

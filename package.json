@@ -1,10 +1,11 @@
 {
   "name": "purge-cli",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Purge the regenerable junk from your Mac — build output, caches, logs.",
   "type": "module",
   "bin": {
-    "purge": "dist/purge.js"
+    "purge": "dist/purge.js",
+    "purge-cli": "dist/purge.js"
   },
   "files": [
     "dist",

@@ -11,8 +11,9 @@ import { renderReport, renderJson, renderSummary } from './ui/render.ts'
 import { renderHistory } from './ui/history.ts'
 import { review } from './ui/tui.ts'
 import { liveLine, scanLine, reapLine, shimmerWordmark } from './ui/progress.ts'
+import pkg from '../package.json' with { type: 'json' }
 
-const VERSION = '0.5.0'
+const VERSION = pkg.version
 
 const HELP = `
 purge v${VERSION} — reclaim the regenerable junk on your Mac
