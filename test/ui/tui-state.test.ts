@@ -231,3 +231,16 @@ test('a colored frame is the plain frame plus 256-color paint', () => {
   assert.equal(colored.replace(/\x1b\[[0-9;]*m/g, ''), plain)
   assert.match(colored, /38;5;/, 'expects the cyan/blue/gray palette')
 })
+
+test('tab hops between item boxes, skipping headers and wrapping', () => {
+  let s = initState(items()) // rows: [builds hdr, .next, dist, pkg hdr, npm]
+  assert.equal(s.cursor, 1)
+  s = reduce(s, 'next-item')
+  assert.equal(s.cursor, 2, 'tab must go to the next box')
+  s = reduce(s, 'next-item')
+  assert.equal(s.cursor, 4, 'tab must skip the pkg header')
+  s = reduce(s, 'next-item')
+  assert.equal(s.cursor, 1, 'tab must wrap to the first box')
+  s = reduce(s, 'prev-item')
+  assert.equal(s.cursor, 4, 'shift+tab must wrap backwards')
+})

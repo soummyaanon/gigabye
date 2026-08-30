@@ -65,6 +65,7 @@ Full-keyboard, zero-dependency TUI:
 | Key | Action |
 |---|---|
 | `↑`/`↓` `j`/`k` | move |
+| `tab` / `shift+tab` | hop to the next / previous checkbox, skipping headers |
 | `space` | toggle an item — or a whole group from its header |
 | `←`/`→` `h`/`l` | fold / unfold a group |
 | `/` | live-filter by path (`esc` clears) |

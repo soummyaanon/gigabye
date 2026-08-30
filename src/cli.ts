@@ -12,7 +12,7 @@ import { renderHistory } from './ui/history.ts'
 import { review } from './ui/tui.ts'
 import { liveLine, scanLine, reapLine, shimmerWordmark } from './ui/progress.ts'
 
-const VERSION = '0.4.0'
+const VERSION = '0.5.0'
 
 const HELP = `
 purge v${VERSION} — reclaim the regenerable junk on your Mac

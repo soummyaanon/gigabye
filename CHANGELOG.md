@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [semver](https://semver.org).
 
+## [0.5.0] - 2026-08-30
+
+### Added
+- `tab` / `shift+tab` hop checkbox-to-checkbox on the review screen,
+  skipping group headers and wrapping at the ends — the fastest way to
+  reach one particular box.
+
 ## [0.4.0] - 2026-08-30
 
 ### Added

@@ -15,9 +15,10 @@ const SHOW_CURSOR = '\x1b[?25h'
 const CLEAR = '\x1b[2J\x1b[H'
 
 function keyName(
-  str: string, key: { name?: string; ctrl?: boolean }, filtering: boolean,
+  str: string, key: { name?: string; ctrl?: boolean; shift?: boolean }, filtering: boolean,
 ): string | null {
   if (key.ctrl && key.name === 'c') return 'q'
+  if (key.name === 'tab') return key.shift === true ? 'prev-item' : 'next-item'
 
   // While the filter line is open, printable characters are query text and
   // only enter/escape/backspace keep their meaning.
@@ -93,7 +94,7 @@ export function review(items: Reviewed[]): Promise<Reviewed[] | null> {
     out.write(HIDE_CURSOR)
     process.on('SIGINT', onSigint)
 
-    process.stdin.on('keypress', (str: string, key: { name?: string; ctrl?: boolean }) => {
+    process.stdin.on('keypress', (str: string, key: { name?: string; ctrl?: boolean; shift?: boolean }) => {
       const name = keyName(str, key ?? {}, state.filtering)
       if (name === null) return
       state = reduce(state, name)

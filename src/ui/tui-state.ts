@@ -104,6 +104,18 @@ export function reduce(s: TuiState, key: string): TuiState {
     case 'g': return { ...s, cursor: 0 }
     case 'G': return { ...s, cursor: clamp(s.rows.length - 1, s.rows) }
 
+    // Tab hops checkbox-to-checkbox: headers are skipped and the ends wrap,
+    // so one keystroke always lands on a particular box.
+    case 'next-item': case 'prev-item': {
+      const dir = key === 'next-item' ? 1 : -1
+      const n = s.rows.length
+      for (let step = 1; step <= n; step++) {
+        const i = (((s.cursor + dir * step) % n) + n) % n
+        if (s.rows[i]?.kind === 'item') return { ...s, cursor: i }
+      }
+      return s
+    }
+
     case 'space': {
       const row = s.rows[s.cursor]
       if (row === undefined) return s
@@ -226,7 +238,7 @@ export function renderFrame(
   }
   lines.push(paint(C.dim, s.filtering
     ? '  type to filter   ↑/↓ move   enter keep   esc clear'
-    : '  space toggle   ←/→ fold   a all   / filter   g/G ends   enter continue   q quit'))
+    : '  tab next box   space toggle   ←/→ fold   a all   / filter   g/G ends   enter continue   q quit'))
   const selected = s.items.filter((i) => i.selected && i.selectable)
   lines.push(paint(C.accent, `  selected: ${selected.length} items, ${formatBytes(selectedBytes(s))}`))
   return lines.join('\n')
