@@ -26,20 +26,11 @@ package-manager downloads — often tens of gigabytes, sometimes far more,
 all of it regenerable. purge finds it in one scan, shows it grouped and
 sized, and deletes only what you leave checked.
 
-```
-▾ BUILD ARTIFACTS  9.1 GB (14)
-   [x]    2.8 GB  ~/old-startup/node_modules        idle 214d
-   [x]    1.9 GB  ~/side-project/.next
-   [ ]    841 MB  ~/oss/thing/dist                  ! tracked in git
-▾ APP CACHES  6.4 GB (23)
-   [x]    1.5 GB  ~/Library/Caches/Google
-   [ ]    1.2 GB  ~/.cache/huggingface              ! model cache — re-download is slow
-▸ XCODE  11.2 GB (3)
+<div align="center">
 
-  / filter…
-  space toggle   ←/→ fold   a all   / filter   g/G ends   enter continue   q quit
-  selected: 31 items, 24.7 GB
-```
+![purge scanning a Mac and reviewing junk in its interactive TUI](docs/demo.gif)
+
+</div>
 
 ## What it looks for
 
