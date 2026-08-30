@@ -18,7 +18,7 @@
 </div>
 
 ```
-npm i -g purge-cli     # or: npx purge-cli
+npm i -g purge-cli     # or: npx purge-cli@latest
 purge                  # or: purge-cli
 ```
 
