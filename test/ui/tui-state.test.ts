@@ -223,3 +223,11 @@ test('headers render the group checkbox state', () => {
   const on = renderFrame(s, 24, { color: false, home: '/h' })
   assert.match(on, /\[x\] BUILD ARTIFACTS/)
 })
+
+test('a colored frame is the plain frame plus 256-color paint', () => {
+  const s = initState(items())
+  const plain = renderFrame(s, 24, { color: false, home: '/h' })
+  const colored = renderFrame(s, 24, { color: true, home: '/h' })
+  assert.equal(colored.replace(/\x1b\[[0-9;]*m/g, ''), plain)
+  assert.match(colored, /38;5;/, 'expects the cyan/blue/gray palette')
+})

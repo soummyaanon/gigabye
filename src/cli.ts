@@ -10,9 +10,9 @@ import { readManifests } from './reap/manifest.ts'
 import { renderReport, renderJson, renderSummary } from './ui/render.ts'
 import { renderHistory } from './ui/history.ts'
 import { review } from './ui/tui.ts'
-import { banner, liveLine, scanLine, reapLine } from './ui/progress.ts'
+import { liveLine, scanLine, reapLine, shimmerWordmark } from './ui/progress.ts'
 
-const VERSION = '0.3.0'
+const VERSION = '0.4.0'
 
 const HELP = `
 purge v${VERSION} — reclaim the regenerable junk on your Mac
@@ -103,8 +103,8 @@ async function main(argv: string[]): Promise<number> {
   let timer: ReturnType<typeof setInterval> | undefined
   if (!opts.json) {
     if (process.stderr.isTTY === true) {
-      process.stderr.write(`\x1b[2m${banner(VERSION)}\x1b[0m\n\n`)
-      timer = setInterval(() => live.update(scanLine(tick++, sized, sizedBytes)), 80)
+      process.stderr.write(`${shimmerWordmark(4, true)}\x1b[38;5;245m  v${VERSION} — say purge to the junk on your Mac\x1b[0m\n\n`)
+      timer = setInterval(() => live.update(scanLine(tick++, sized, sizedBytes, true)), 80)
     } else {
       process.stderr.write('purge  scanning...\n')
     }
@@ -177,7 +177,7 @@ async function main(argv: string[]): Promise<number> {
   const liveReap = liveLine(process.stdout)
   const manifest = await reap(chosen, guardCtx, {
     version: VERSION, runsDir,
-    onProgress: (freed, total) => liveReap.update(reapLine(freed, total)),
+    onProgress: (freed, total) => liveReap.update(reapLine(freed, total, color)),
   })
   liveReap.done()
   process.stdout.write(`${renderSummary(manifest, { color })}\n`)

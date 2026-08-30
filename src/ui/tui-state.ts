@@ -178,6 +178,12 @@ export function renderFrame(
   const paint = opts.color
     ? (code: string, str: string) => `\x1b[${code}m${str}\x1b[0m`
     : (_code: string, str: string) => str
+  // The purge palette (see progress.ts INK): cyan headers, blue sizes, gray
+  // chrome, a deep-blue bar for the cursor instead of harsh reverse video.
+  const C = {
+    header: '1;38;5;81', size: '38;5;75', chrome: '38;5;245', dim: '38;5;240',
+    cursor: '48;5;24;38;5;195', accent: '1;38;5;51', warn: '38;5;179',
+  }
 
   const footer = s.filtering || s.filter !== '' ? 5 : 4
   const body = Math.max(3, height - footer)
@@ -196,7 +202,7 @@ export function renderFrame(
       const on = inGroup.filter((it) => it.selected).length
       const box = inGroup.length === 0 ? '[-]' : on === 0 ? '[ ]' : on === inGroup.length ? '[x]' : '[~]'
       const text = `${mark} ${box} ${HEADERS[row.group]}  ${formatBytes(row.bytes)} (${row.count})`
-      lines.push(here ? paint('7', text) : `${paint('1', `${mark} ${box} ${HEADERS[row.group]}`)}  ${paint('2', `${formatBytes(row.bytes)} (${row.count})`)}`)
+      lines.push(here ? paint(C.cursor, text) : `${paint(C.header, `${mark} ${box} ${HEADERS[row.group]}`)}  ${paint(C.chrome, `${formatBytes(row.bytes)} (${row.count})`)}`)
       continue
     }
     const it = s.items[row.index]
@@ -205,20 +211,23 @@ export function renderFrame(
     const box = !it.selectable ? '[-]' : it.selected ? '[x]' : '[ ]'
     // Same de-duplication as renderReport: a warning that repeats the note
     // verbatim must not print the text twice.
-    const note = it.note && !it.warnings.includes(it.note) ? paint('2', `  ${it.note}`) : ''
-    const warn = it.warnings.length > 0 ? paint('33', `  ! ${it.warnings.join(', ')}`) : ''
-    const text = `   ${box} ${formatBytes(it.bytes).padStart(9)}  ${tildify(it.path, opts.home)}${note}${warn}`
-    lines.push(here ? paint('7', text) : text)
+    const note = it.note && !it.warnings.includes(it.note) ? paint(C.dim, `  ${it.note}`) : ''
+    const warn = it.warnings.length > 0 ? paint(C.warn, `  ! ${it.warnings.join(', ')}`) : ''
+    if (here) {
+      lines.push(paint(C.cursor, `   ${box} ${formatBytes(it.bytes).padStart(9)}  ${tildify(it.path, opts.home)}${it.note && !it.warnings.includes(it.note) ? `  ${it.note}` : ''}${it.warnings.length > 0 ? `  ! ${it.warnings.join(', ')}` : ''}`))
+    } else {
+      lines.push(`   ${paint(it.selected ? C.accent : C.chrome, box)} ${paint(C.size, formatBytes(it.bytes).padStart(9))}  ${tildify(it.path, opts.home)}${note}${warn}`)
+    }
   }
 
   lines.push('')
   if (s.filtering || s.filter !== '') {
-    lines.push(`  / ${s.filter}${s.filtering ? paint('7', ' ') : ''}`)
+    lines.push(`  ${paint(C.accent, '/')} ${s.filter}${s.filtering ? paint('7', ' ') : ''}`)
   }
-  lines.push(paint('2', s.filtering
+  lines.push(paint(C.dim, s.filtering
     ? '  type to filter   ↑/↓ move   enter keep   esc clear'
     : '  space toggle   ←/→ fold   a all   / filter   g/G ends   enter continue   q quit'))
   const selected = s.items.filter((i) => i.selected && i.selectable)
-  lines.push(paint('1', `  selected: ${selected.length} items, ${formatBytes(selectedBytes(s))}`))
+  lines.push(paint(C.accent, `  selected: ${selected.length} items, ${formatBytes(selectedBytes(s))}`))
   return lines.join('\n')
 }

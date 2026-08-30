@@ -1,6 +1,6 @@
 {
   "name": "purge-cli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Purge the regenerable junk from your Mac \u2014 build output, caches, logs.",
   "type": "module",
   "bin": {

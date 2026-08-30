@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [semver](https://semver.org).
 
+## [0.4.0] - 2026-08-30
+
+### Added
+- The cyan/blue/gray palette: 256-color headers, sizes and chrome, a
+  deep-blue cursor bar instead of reverse video, a cyan→blue gradient
+  reap bar, and a shimmer sweep across the PURGE wordmark on the review
+  screen. Plain-text output is byte-identical when color is off, and the
+  test suite enforces it.
+
 ## [0.3.0] - 2026-08-30
 
 ### Added

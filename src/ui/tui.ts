@@ -2,7 +2,7 @@ import readline from 'node:readline'
 import os from 'node:os'
 import type { Reviewed } from '../types.ts'
 import { initState, reduce, renderFrame, type TuiState } from './tui-state.ts'
-import { wordmark } from './progress.ts'
+import { shimmerWordmark } from './progress.ts'
 
 // The escape character MUST be written as \x1b. A literal ESC byte pasted
 // into source is invisible in most editors and silently lost when the file is
@@ -61,15 +61,22 @@ export function review(items: Reviewed[]): Promise<Reviewed[] | null> {
     const out = process.stdout
     let state: TuiState = initState(items)
 
+    let tick = 0
     const draw = () => {
       out.write(CLEAR)
       const color = out.isTTY === true
       // Wordmark takes 3 rows (2 letters + 1 blank); the frame gets the rest.
-      out.write(`${color ? '\x1b[2m' : ''}${wordmark()}${color ? '\x1b[0m' : ''}\n\n`)
+      out.write(`${shimmerWordmark(tick, color)}\n\n`)
       out.write(renderFrame(state, Math.max((out.rows ?? 24) - 3, 8), { color, home: os.homedir() }))
     }
 
+    // The shimmer sweep. Only the wordmark animates, and only on a real TTY.
+    const shimmer = out.isTTY === true
+      ? setInterval(() => { tick++; draw() }, 120)
+      : undefined
+
     const restore = () => {
+      if (shimmer !== undefined) clearInterval(shimmer)
       process.stdin.setRawMode?.(false)
       process.stdin.pause()
       out.write(SHOW_CURSOR)
