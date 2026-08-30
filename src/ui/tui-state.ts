@@ -238,7 +238,7 @@ export function renderFrame(
   }
   lines.push(paint(C.dim, s.filtering
     ? '  type to filter   ↑/↓ move   enter keep   esc clear'
-    : '  tab next box   space toggle   ←/→ fold   a all   / filter   g/G ends   enter continue   q quit'))
+    : '  tab box   space toggle   ←/→ fold   a all   / filter   g/G ends   enter go   q quit'))
   const selected = s.items.filter((i) => i.selected && i.selectable)
   lines.push(paint(C.accent, `  selected: ${selected.length} items, ${formatBytes(selectedBytes(s))}`))
   return lines.join('\n')
