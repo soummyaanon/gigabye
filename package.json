@@ -1,20 +1,41 @@
 {
-  "name": "gigabye",
-  "version": "0.1.0",
-  "description": "Say gigabye to the build junk on your Mac.",
+  "name": "purge-cli",
+  "version": "0.2.0",
+  "description": "Purge the regenerable junk from your Mac \u2014 build output, caches, logs.",
   "type": "module",
-  "bin": { "gigabye": "dist/gigabye.js" },
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=22.18" },
-  "os": ["darwin"],
+  "bin": {
+    "purge": "dist/purge.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "os": [
+    "darwin"
+  ],
   "license": "MIT",
   "author": "soummyaanon",
-  "repository": { "type": "git", "url": "git+https://github.com/soummyaanon/gigabye.git" },
-  "keywords": ["macos", "disk", "cleanup", "node_modules", "cache", "cli"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soummyaanon/purge.git"
+  },
+  "keywords": [
+    "macos",
+    "disk",
+    "cleanup",
+    "node_modules",
+    "cache",
+    "cli",
+    "purge"
+  ],
   "scripts": {
     "test": "node --test 'test/**/*.test.ts'",
     "typecheck": "tsc --noEmit",
-    "build": "esbuild src/cli.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/gigabye.js --banner:js='#!/usr/bin/env node'",
+    "build": "esbuild src/cli.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/purge.js --banner:js='#!/usr/bin/env node'",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {},

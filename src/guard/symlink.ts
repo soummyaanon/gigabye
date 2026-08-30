@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import { ALLOW, type Guard } from './guard.ts'
 
 /**
- * Deleting a symlink is harmless; deleting through one is not. gigabye takes
+ * Deleting a symlink is harmless; deleting through one is not. purge takes
  * the simple route and refuses symlinks entirely.
  */
 export const symlinkGuard: Guard = {

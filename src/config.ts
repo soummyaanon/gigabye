@@ -3,7 +3,7 @@ import path from 'node:path'
 import { ALL_GROUPS, type Group } from './types.ts'
 
 export type Config = {
-  /** Glob patterns gigabye must never touch. */
+  /** Glob patterns purge must never touch. */
   keep: string[]
   staleDays?: number
   minSize?: number
@@ -13,14 +13,14 @@ export type Config = {
 const EMPTY: Config = { keep: [] }
 
 /**
- * Reads ~/.gigabyerc. A missing, unreadable or malformed file yields defaults
+ * Reads ~/.purgerc. A missing, unreadable or malformed file yields defaults
  * rather than an error — a broken config must never stop someone reclaiming
  * disk space, and every field it sets is only ever more conservative.
  */
 export async function loadConfig(home: string): Promise<Config> {
   let raw: string
   try {
-    raw = await fs.readFile(path.join(home, '.gigabyerc'), 'utf8')
+    raw = await fs.readFile(path.join(home, '.purgerc'), 'utf8')
   } catch {
     return { ...EMPTY }
   }

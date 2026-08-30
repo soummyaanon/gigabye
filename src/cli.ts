@@ -10,22 +10,27 @@ import { readManifests } from './reap/manifest.ts'
 import { renderReport, renderJson, renderSummary } from './ui/render.ts'
 import { renderHistory } from './ui/history.ts'
 import { review } from './ui/tui.ts'
+import { banner, liveLine, scanLine, reapLine } from './ui/progress.ts'
 
-const VERSION = '0.1.0'
+const VERSION = '0.2.0'
 
 const HELP = `
-gigabye v${VERSION} — say gigabye to the build junk on your Mac
+purge v${VERSION} — reclaim the regenerable junk on your Mac
 
 USAGE
-  gigabye [group...] [options]
+  purge [group...] [options]
 
 GROUPS (default: all)
   builds     .next, .turbo, dist, cargo target, venvs, stale node_modules
   pkg        npm, bun, playwright, electron, homebrew and gradle caches
   xcode      DerivedData, device support, simulator caches
+  caches     every app's folder in ~/Library/Caches and ~/.cache
   browsers   GPU and service worker caches, on-device AI models
   editors    Cursor, VS Code, Windsurf and Zed caches
+  claude     Claude Desktop/Code caches, transcripts, sandbox scratchpads
+  logs       per-app folders in ~/Library/Logs
   orphans    app data whose app is gone (report only, never deleted)
+  heavy      iOS backups, Trash, Docker.raw (report only, never deleted)
 
 OPTIONS
   -y, --yes           delete without the review screen
@@ -37,20 +42,22 @@ OPTIONS
   -v, --version       print the version
 
 COMMANDS
-  gigabye history [--last] [--json]   past runs and lifetime total
+  purge history [--last] [--json]   past runs and lifetime total
 
-gigabye never touches anything outside your home directory, never follows
-symlinks, and leaves anything tracked in git unchecked for you to confirm.
+purge never touches anything outside your home directory (one exception:
+Claude Code's own /private/tmp scratchpad, always shown with a warning),
+never follows symlinks, and leaves anything tracked in git unchecked for
+you to confirm.
 `
 
 async function main(argv: string[]): Promise<number> {
   if (process.platform !== 'darwin') {
-    process.stderr.write('gigabye currently supports macOS only.\n')
+    process.stderr.write('purge currently supports macOS only.\n')
     return 1
   }
 
   const home = os.homedir()
-  const runsDir = path.join(home, '.gigabye', 'runs')
+  const runsDir = path.join(home, '.purge', 'runs')
   const config = await loadConfig(home)
 
   const parsed = parseArgs(argv, {
@@ -60,7 +67,7 @@ async function main(argv: string[]): Promise<number> {
   })
 
   if ('error' in parsed) {
-    process.stderr.write(`gigabye: ${parsed.error}\n`)
+    process.stderr.write(`purge: ${parsed.error}\n`)
     return 1
   }
   const opts = parsed
@@ -74,7 +81,7 @@ async function main(argv: string[]): Promise<number> {
     const shown = opts.last ? runs.slice(0, 1) : runs
     if (opts.json) {
       // --last yields the manifest object itself, not a one-element array,
-      // so `gigabye history --last --json | jq .freedBytes` works.
+      // so `purge history --last --json | jq .freedBytes` works.
       const payload = opts.last ? (shown[0] ?? null) : shown
       process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`)
     } else {
@@ -84,12 +91,39 @@ async function main(argv: string[]): Promise<number> {
   }
 
   // -- scan ----------------------------------------------------------
-  if (!opts.json) process.stderr.write('gigabye  scanning...\n')
+  // Claude Code's per-user sandbox scratchpad: the one path outside home the
+  // claude scanner may offer and the home guard lets through.
+  const uid = process.getuid?.()
+  const claudeTmpDir = uid === undefined ? undefined : `/private/tmp/claude-${uid}`
+
+  const live = liveLine(process.stderr)
+  let tick = 0
+  let sized = 0
+  let sizedBytes = 0
+  let timer: ReturnType<typeof setInterval> | undefined
+  if (!opts.json) {
+    if (process.stderr.isTTY === true) {
+      process.stderr.write(`\x1b[2m${banner(VERSION)}\x1b[0m\n\n`)
+      timer = setInterval(() => live.update(scanLine(tick++, sized, sizedBytes)), 80)
+    } else {
+      process.stderr.write('purge  scanning...\n')
+    }
+  }
 
   const candidates = await scan(
-    { home, staleDays: opts.staleDays, now: Date.now(), applicationDirs: ['/Applications', path.join(home, 'Applications')] },
-    { groups: opts.groups, minSizeBytes: opts.minSizeBytes },
+    {
+      home, staleDays: opts.staleDays, now: Date.now(),
+      applicationDirs: ['/Applications', path.join(home, 'Applications')],
+      ...(claudeTmpDir !== undefined ? { claudeTmpDir } : {}),
+    },
+    {
+      groups: opts.groups, minSizeBytes: opts.minSizeBytes,
+      onProgress: (done, bytes) => { sized = done; sizedBytes = bytes },
+    },
   )
+
+  if (timer !== undefined) clearInterval(timer)
+  live.done()
 
   const homeStat = await fs.lstat(home)
   // "Desktop & Documents Folders" iCloud sync presents ~/Documents and
@@ -101,6 +135,7 @@ async function main(argv: string[]): Promise<number> {
 
   const guardCtx: GuardContext = {
     home, homeDev: homeStat.dev, keepGlobs: config.keep, desktopDocsSynced,
+    ...(claudeTmpDir !== undefined ? { allowOutsideHome: [claudeTmpDir] } : {}),
   }
   const reviewed = await applyGuards(candidates, guardCtx)
 
@@ -110,7 +145,7 @@ async function main(argv: string[]): Promise<number> {
     return 2
   }
 
-  // Report-only rows (the orphans group) are shown but can never be deleted,
+  // Report-only rows (the orphans and heavy groups) are shown but can never be deleted,
   // so a run that found nothing else has still reclaimed nothing: print the
   // report so the user sees the orphans, then exit 2.
   const anySelectable = reviewed.some((r) => r.selectable)
@@ -118,7 +153,7 @@ async function main(argv: string[]): Promise<number> {
   if (opts.json) { process.stdout.write(`${renderJson(reviewed)}\n`); return anySelectable ? 0 : 2 }
   if (opts.dryRun || !anySelectable) {
     process.stdout.write(`${renderReport(reviewed, { color, home })}\n`)
-    if (anySelectable) process.stdout.write('\nrun `gigabye` to pick what to delete\n')
+    if (anySelectable) process.stdout.write('\nrun `purge` to pick what to delete\n')
     else process.stdout.write('\nnothing here is reclaimable — the rows above are for review only\n')
     return anySelectable ? 0 : 2
   }
@@ -127,7 +162,7 @@ async function main(argv: string[]): Promise<number> {
   let chosen = reviewed
   if (!opts.apply) {
     if (!process.stdin.isTTY) {
-      process.stderr.write('gigabye: not a terminal — use --yes or --dry-run\n')
+      process.stderr.write('purge: not a terminal — use --yes or --dry-run\n')
       return 1
     }
     const picked = await review(reviewed)
@@ -139,7 +174,12 @@ async function main(argv: string[]): Promise<number> {
   if (wanted.length === 0) { process.stdout.write('\nnothing selected. nothing deleted.\n'); return 0 }
 
   // -- reap ----------------------------------------------------------
-  const manifest = await reap(chosen, guardCtx, { version: VERSION, runsDir })
+  const liveReap = liveLine(process.stdout)
+  const manifest = await reap(chosen, guardCtx, {
+    version: VERSION, runsDir,
+    onProgress: (freed, total) => liveReap.update(reapLine(freed, total)),
+  })
+  liveReap.done()
   process.stdout.write(`${renderSummary(manifest, { color })}\n`)
 
   const skipped = wanted.length - manifest.items.length
@@ -152,7 +192,7 @@ async function main(argv: string[]): Promise<number> {
 main(process.argv.slice(2)).then(
   (code) => { process.exitCode = code },
   (err: unknown) => {
-    process.stderr.write(`gigabye: ${err instanceof Error ? err.message : String(err)}\n`)
+    process.stderr.write(`purge: ${err instanceof Error ? err.message : String(err)}\n`)
     process.exitCode = 1
   },
 )

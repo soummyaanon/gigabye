@@ -10,7 +10,7 @@ const run = promisify(execFile)
 const CLI = path.resolve(import.meta.dirname, '..', 'src', 'cli.ts')
 
 async function sandboxHome(): Promise<string> {
-  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-e2e-'))
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-e2e-'))
   const junk = path.join(home, 'proj', '.next')
   await fs.mkdir(junk, { recursive: true })
   await fs.writeFile(path.join(junk, 'chunk.js'), Buffer.alloc(2_000_000))
@@ -52,7 +52,7 @@ test('--yes deletes and writes a manifest', async () => {
     await fs.access(path.join(home, 'proj', '.next')).then(() => true, () => false), false,
     '--yes did not delete',
   )
-  const runs = await fs.readdir(path.join(home, '.gigabye', 'runs'))
+  const runs = await fs.readdir(path.join(home, '.purge', 'runs'))
   assert.equal(runs.length, 1, 'no manifest written')
 })
 
@@ -84,7 +84,7 @@ test('an unknown option exits non-zero with a useful message', async () => {
 })
 
 async function orphanHome(): Promise<string> {
-  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-orphan-e2e-'))
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-orphan-e2e-'))
   const data = path.join(home, 'Library', 'Application Support', 'Slack')
   await fs.mkdir(data, { recursive: true })
   await fs.writeFile(path.join(data, 'blob.bin'), Buffer.alloc(2_000_000))

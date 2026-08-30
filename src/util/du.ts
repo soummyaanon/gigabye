@@ -7,7 +7,7 @@ import path from 'node:path'
  * Uses stat.blocks * 512 (allocated blocks), never stat.size. macOS
  * "Optimize Storage" leaves dataless iCloud placeholders whose logical
  * size is large and whose allocated size is zero; measuring by size
- * would make gigabye report freeing space that was never on disk.
+ * would make purge report freeing space that was never on disk.
  *
  * Never follows symlinks. Unreadable entries contribute 0.
  */

@@ -7,7 +7,7 @@ import { applyGuards } from '../../src/guard/index.ts'
 import type { Candidate } from '../../src/types.ts'
 
 async function realHome(): Promise<{ home: string; homeDev: number }> {
-  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-pipe-'))
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-pipe-'))
   const st = await fs.lstat(home)
   return { home, homeDev: st.dev }
 }

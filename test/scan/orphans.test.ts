@@ -7,7 +7,7 @@ import { orphansScanner } from '../../src/scan/orphans.ts'
 import type { ScanContext } from '../../src/scan/scanner.ts'
 
 async function home(dirs: string[]): Promise<ScanContext> {
-  const h = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-orph-'))
+  const h = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-orph-'))
   for (const d of dirs) await fs.mkdir(path.join(h, d), { recursive: true })
   // applicationDirs is empty so the result never depends on what the
   // developer running the tests happens to have installed.

@@ -2,8 +2,11 @@ import path from 'node:path'
 import { exists } from '../util/exists.ts'
 import type { PathScanner, RawCandidate } from './scanner.ts'
 
-/** Relative to home → label. Every one of these is re-downloaded on demand. */
-const CACHES: Array<[string, string]> = [
+/**
+ * Relative to home → label. Every one of these is re-downloaded on demand.
+ * Exported so the generic `caches` scanner can skip what is claimed here.
+ */
+export const PKG_CACHE_PATHS: Array<[string, string]> = [
   ['.npm/_cacache', 'npm cache'],
   ['.bun/install/cache', 'bun cache'],
   ['Library/Caches/ms-playwright', 'playwright browsers'],
@@ -21,7 +24,7 @@ export const pkgCacheScanner: PathScanner = {
   group: 'pkg',
   async probe(ctx) {
     const out: RawCandidate[] = []
-    for (const [rel, label] of CACHES) {
+    for (const [rel, label] of PKG_CACHE_PATHS) {
       const full = path.join(ctx.home, rel)
       if (await exists(full)) out.push({ path: full, label, group: 'pkg' })
     }

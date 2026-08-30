@@ -4,7 +4,7 @@ import { applyGuards, type GuardContext } from '../guard/index.ts'
 import { writeManifest } from './manifest.ts'
 
 /**
- * THE ONLY MODULE IN gigabye THAT DELETES ANYTHING.
+ * THE ONLY MODULE IN purge THAT DELETES ANYTHING.
  *
  * Do not add fs.rm, fs.unlink or fs.rmdir anywhere else in src/. CI enforces
  * this by grep — see .github/workflows/ci.yml.
@@ -18,7 +18,12 @@ import { writeManifest } from './manifest.ts'
 export async function reap(
   items: Reviewed[],
   ctx: GuardContext,
-  opts: { version: string; runsDir: string },
+  opts: {
+    version: string
+    runsDir: string
+    /** Called after each successful removal with cumulative freed bytes. */
+    onProgress?: (freedBytes: number, totalBytes: number) => void
+  },
 ): Promise<RunManifest> {
   // selectable:false means a guard returned 'report' — the orphans group.
   // Filtered here AND re-checked against the fresh verdict below, so a
@@ -48,6 +53,10 @@ export async function reap(
     try {
       await fs.rm(item.path, { recursive: true, force: true })
       reaped.push({ path: item.path, bytes: item.bytes, group: item.group })
+      opts.onProgress?.(
+        reaped.reduce((n, r) => n + r.bytes, 0),
+        wanted.reduce((n, w) => n + w.bytes, 0),
+      )
     } catch { /* permission denied and friends — skip, never fatal */ }
   }
 

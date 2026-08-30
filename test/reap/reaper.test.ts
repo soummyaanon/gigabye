@@ -12,9 +12,9 @@ import type { Reviewed } from '../../src/types.ts'
 const run = promisify(execFile)
 
 async function sandbox() {
-  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-reap-'))
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-reap-'))
   const st = await fs.lstat(home)
-  const runsDir = path.join(home, '.gigabye', 'runs')
+  const runsDir = path.join(home, '.purge', 'runs')
   return { home, homeDev: st.dev, runsDir, ctx: { home, homeDev: st.dev, keepGlobs: [], desktopDocsSynced: false } }
 }
 
@@ -67,7 +67,7 @@ test('re-validates: refuses a path that became a symlink after the scan', async 
 
 test('re-validates: refuses a path outside home even if handed one directly', async () => {
   const { ctx, runsDir } = await sandbox()
-  const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-outside-'))
+  const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-outside-'))
   await fs.writeFile(path.join(outside, 'keep.txt'), 'x')
 
   const m = await reap([reviewed(outside, 4096)], ctx, OPTS(runsDir))
@@ -157,4 +157,22 @@ test('SAFETY: refuses an item the guards now mark report-only', async () => {
 
   assert.equal(m.items.length, 0)
   assert.equal(await fs.access(target).then(() => true, () => false), true)
+})
+
+test('reports freed bytes as it deletes', async () => {
+  const { home, ctx, runsDir } = await sandbox()
+  const a = path.join(home, 'proj', '.next')
+  const b = path.join(home, 'proj', 'dist')
+  for (const t of [a, b]) {
+    await fs.mkdir(t, { recursive: true })
+    await fs.writeFile(path.join(t, 'chunk.js'), Buffer.alloc(10_000))
+  }
+  const seen: Array<[number, number]> = []
+  await reap([reviewed(a, 10_000), reviewed(b, 10_000)], ctx, {
+    ...OPTS(runsDir),
+    onProgress: (freed, total) => seen.push([freed, total]),
+  })
+  assert.equal(seen.length, 2)
+  assert.deepEqual(seen.at(-1), [20_000, 20_000])
+  assert.ok(seen.every(([, total]) => total === 20_000), 'total must be stable across calls')
 })

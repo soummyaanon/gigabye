@@ -1,16 +1,22 @@
 import type { Group, Reviewed, RunManifest } from '../types.ts'
 import { formatBytes } from '../util/bytes.ts'
 
-const HEADERS: Record<Group, string> = {
+export const HEADERS: Record<Group, string> = {
   builds: 'BUILD ARTIFACTS',
   pkg: 'PACKAGE CACHES',
   xcode: 'XCODE',
+  caches: 'APP CACHES',
   browsers: 'BROWSER CACHES',
   editors: 'EDITOR CACHES',
+  claude: 'CLAUDE DATA',
+  logs: 'LOGS',
   orphans: 'ORPHANED APP DATA',
+  heavy: 'HEAVY ITEMS',
 }
 
-const ORDER: Group[] = ['builds', 'pkg', 'xcode', 'browsers', 'editors', 'orphans']
+export const ORDER: Group[] = [
+  'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'claude', 'logs', 'orphans', 'heavy',
+]
 
 type Paint = (s: string) => string
 const plain: Paint = (s) => s

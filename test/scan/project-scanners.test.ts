@@ -22,7 +22,7 @@ function visit(p: string, over: Partial<DirVisit> = {}): DirVisit {
 }
 
 async function project(files: Record<string, string>, mtimeDaysAgo: number): Promise<string> {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-proj-'))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-proj-'))
   for (const [rel, body] of Object.entries(files)) {
     const full = path.join(root, rel)
     await fs.mkdir(path.dirname(full), { recursive: true })
@@ -51,7 +51,7 @@ test('spares node_modules in an actively edited project', async () => {
 })
 
 test('spares a monorepo whose only recent files are deep in packages/', async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-mono-'))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-mono-'))
   // Root files are ancient; the real work is four levels down.
   for (const [rel, days] of [['README.md', 400], ['package.json', 400], ['packages/app/src/index.ts', 2]] as const) {
     const full = path.join(root, rel)

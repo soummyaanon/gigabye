@@ -6,8 +6,8 @@ import path from 'node:path'
 import { loadConfig } from '../src/config.ts'
 
 async function home(body?: string): Promise<string> {
-  const h = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-cfg-'))
-  if (body !== undefined) await fs.writeFile(path.join(h, '.gigabyerc'), body)
+  const h = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-cfg-'))
+  if (body !== undefined) await fs.writeFile(path.join(h, '.purgerc'), body)
   return h
 }
 

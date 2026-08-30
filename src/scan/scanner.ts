@@ -10,6 +10,12 @@ export type ScanContext = {
   now: number
   /** Where to look for installed .app bundles. Injected so the orphans scanner is testable. */
   applicationDirs: string[]
+  /**
+   * Claude Code's per-user sandbox scratchpad root, /private/tmp/claude-<uid>.
+   * The one path outside home purge may touch. Optional and injected so the
+   * claude scanner is testable; cli.ts fills in the real path.
+   */
+  claudeTmpDir?: string
 }
 
 /** A candidate before the sizing pass has run. */

@@ -7,7 +7,7 @@ import { homeGuard } from '../../src/guard/home.ts'
 import { symlinkGuard } from '../../src/guard/symlink.ts'
 import { syncRootsGuard } from '../../src/guard/sync-roots.ts'
 import { keepGuard, matchGlob } from '../../src/guard/keep.ts'
-import { orphanGuard } from '../../src/guard/orphan.ts'
+import { reportOnlyGuard } from '../../src/guard/report-only.ts'
 import { fragileGuard } from '../../src/guard/fragile.ts'
 import { volumeGuard } from '../../src/guard/volume.ts'
 import type { GuardContext } from '../../src/guard/guard.ts'
@@ -35,8 +35,16 @@ test('blocks home itself', async () => {
   assert.equal((await homeGuard.check(cand(HOME), ctx)).action, 'block')
 })
 
+test('allows exactly the allowlisted outside-home path, nothing near it', async () => {
+  const allowed: GuardContext = { ...ctx, allowOutsideHome: ['/private/tmp/claude-501'] }
+  assert.equal((await homeGuard.check(cand('/private/tmp/claude-501'), allowed)).action, 'allow')
+  assert.equal((await homeGuard.check(cand('/private/tmp/claude-501-evil'), allowed)).action, 'block')
+  assert.equal((await homeGuard.check(cand('/private/tmp/claude-501/sub'), allowed)).action, 'block')
+  assert.equal((await homeGuard.check(cand('/private/tmp/claude-501/../shadow'), allowed)).action, 'block')
+})
+
 test('blocks symlinks', async () => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-sym-'))
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-sym-'))
   await fs.mkdir(path.join(dir, 'real'))
   await fs.symlink(path.join(dir, 'real'), path.join(dir, 'link'))
   const local: GuardContext = { ...ctx, home: dir }
@@ -91,7 +99,7 @@ test('downgrades fragile paths that hold unrecoverable data', async () => {
 })
 
 test('blocks a path on another volume', async () => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-vol-'))
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-vol-'))
   const st = await fs.lstat(dir)
   const same: GuardContext = { ...ctx, home: dir, homeDev: st.dev }
   assert.equal((await volumeGuard.check(cand(dir), same)).action, 'allow')
@@ -101,9 +109,41 @@ test('blocks a path on another volume', async () => {
 })
 
 test('marks the orphans group report-only, never selectable', async () => {
-  const v = await orphanGuard.check(cand('/Users/x/Library/Application Support/Slack', { group: 'orphans' }), ctx)
+  const v = await reportOnlyGuard.check(cand('/Users/x/Library/Application Support/Slack', { group: 'orphans' }), ctx)
   assert.equal(v.action, 'report')
-  assert.equal((await orphanGuard.check(cand('/Users/x/p/.next'), ctx)).action, 'allow')
+  assert.equal((await reportOnlyGuard.check(cand('/Users/x/p/.next'), ctx)).action, 'allow')
+})
+
+test('marks the heavy group report-only, never selectable', async () => {
+  const v = await reportOnlyGuard.check(cand('/Users/x/.Trash', { group: 'heavy' }), ctx)
+  assert.equal(v.action, 'report')
+})
+
+test('downgrades iCloud-backed caches', async () => {
+  for (const p of ['/Users/x/Library/Caches/CloudKit', '/Users/x/Library/Caches/com.apple.bird']) {
+    const v = await fragileGuard.check(cand(p, { group: 'caches' }), ctx)
+    assert.equal(v.action, 'downgrade', p)
+    assert.match(v.action === 'downgrade' ? v.warning : '', /iCloud/)
+  }
+})
+
+test('downgrades ML model caches that are slow to re-download', async () => {
+  for (const p of ['/Users/x/.cache/huggingface', '/Users/x/.cache/torch']) {
+    const v = await fragileGuard.check(cand(p, { group: 'caches' }), ctx)
+    assert.equal(v.action, 'downgrade', p)
+    assert.match(v.action === 'downgrade' ? v.warning : '', /model/)
+  }
+})
+
+test('downgrades Claude session history and live scratchpads', async () => {
+  for (const p of ['/Users/x/.claude/projects', '/Users/x/.claude/file-history']) {
+    const v = await fragileGuard.check(cand(p, { group: 'claude' }), ctx)
+    assert.equal(v.action, 'downgrade', p)
+    assert.match(v.action === 'downgrade' ? v.warning : '', /resume|rewind/)
+  }
+  const v = await fragileGuard.check(cand('/private/tmp/claude-501', { group: 'claude' }), ctx)
+  assert.equal(v.action, 'downgrade')
+  assert.match(v.action === 'downgrade' ? v.warning : '', /running|sessions/)
 })
 
 test('matchGlob handles the patterns the config documents', () => {

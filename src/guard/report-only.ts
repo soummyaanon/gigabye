@@ -1,9 +1,9 @@
+import type { Group } from '../types.ts'
 import { ALLOW, type Guard } from './guard.ts'
 
 /**
- * The orphans group is informational. diskdiet printed it with the note
- * "review these yourself — never deleted automatically"; this enforces it in
- * code rather than in a comment.
+ * Whole groups that are informational: shown so the user learns where the
+ * space went, never deletable by this tool.
  *
  * 'report' rather than 'block': blocking would drop the candidate from the
  * pipeline entirely, so the group could never print anything at all and the
@@ -11,10 +11,14 @@ import { ALLOW, type Guard } from './guard.ts'
  * the row visible while making it unselectable, and the reaper refuses any
  * item whose fresh verdict is report-only.
  */
-export const orphanGuard: Guard = {
-  name: 'orphan',
+const REPORT_ONLY: ReadonlySet<Group> = new Set(['orphans', 'heavy'])
+
+export const reportOnlyGuard: Guard = {
+  name: 'report-only',
   check(c) {
-    if (c.group === 'orphans') return { action: 'report', warning: 'review manually — never deleted' }
+    if (REPORT_ONLY.has(c.group)) {
+      return { action: 'report', warning: 'review manually — never deleted' }
+    }
     return ALLOW
   },
 }

@@ -36,7 +36,7 @@ jobs:
         run: |
           deps=$(node -p "JSON.stringify(require('./package.json').dependencies || {})")
           if [ "$deps" != "{}" ]; then
-            echo "gigabye must have no runtime dependencies, found: $deps"
+            echo "purge must have no runtime dependencies, found: $deps"
             exit 1
           fi
 

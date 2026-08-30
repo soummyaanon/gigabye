@@ -12,6 +12,10 @@ import { xcodeScanner } from './xcode.ts'
 import { editorsScanner } from './editors.ts'
 import { browsersScanner } from './browsers.ts'
 import { orphansScanner } from './orphans.ts'
+import { sysCachesScanner } from './sys-caches.ts'
+import { logsScanner } from './logs.ts'
+import { claudeScanner } from './claude.ts'
+import { heavyScanner } from './heavy.ts'
 
 const WALK_SCANNERS: WalkScanner[] = [
   buildsScanner, nodeModulesScanner, cargoScanner, pythonScanner,
@@ -19,6 +23,7 @@ const WALK_SCANNERS: WalkScanner[] = [
 
 const PATH_SCANNERS: PathScanner[] = [
   pkgCacheScanner, xcodeScanner, editorsScanner, browsersScanner, orphansScanner,
+  sysCachesScanner, logsScanner, claudeScanner, heavyScanner,
 ]
 
 /** Sizing is I/O bound. Bound the concurrency so a big home directory does not thrash. */
@@ -36,15 +41,18 @@ const SIZING_CONCURRENCY = 8
 const SKIP_UNDER_HOME = [
   'Library', 'Applications', 'Pictures', 'Music', 'Movies',
   '.vscode', '.cursor', '.claude', '.codex', '.windsurf', '.local', '.rustup', '.cargo/registry',
+  // owned by the caches scanner; the walker would claim venvs buried inside it
+  '.cache',
 ]
 
 async function sizeAll(
   raw: RawCandidate[],
-  onProgress?: (done: number) => void,
+  onProgress?: (done: number, bytes: number) => void,
 ): Promise<Candidate[]> {
   const out: Candidate[] = []
   let cursor = 0
   let done = 0
+  let total = 0
 
   async function worker() {
     for (;;) {
@@ -53,7 +61,8 @@ async function sizeAll(
       if (item === undefined) return
       const bytes = await diskUsageBytes(item.path)
       out.push({ ...item, bytes })
-      onProgress?.(++done)
+      total += bytes
+      onProgress?.(++done, total)
     }
   }
 
@@ -68,7 +77,7 @@ async function sizeAll(
  */
 export async function scan(
   ctx: ScanContext,
-  opts: { groups: Group[]; minSizeBytes: number; onProgress?: (n: number) => void },
+  opts: { groups: Group[]; minSizeBytes: number; onProgress?: (done: number, bytes: number) => void },
 ): Promise<Candidate[]> {
   const wanted = new Set(opts.groups)
   const raw: RawCandidate[] = []

@@ -6,7 +6,7 @@ import path from 'node:path'
 import { diskUsageBytes } from '../../src/util/du.ts'
 
 async function fixture(): Promise<string> {
-  return await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-du-'))
+  return await fs.mkdtemp(path.join(os.tmpdir(), 'purge-du-'))
 }
 
 test('measures allocated blocks, not logical size', async () => {
@@ -37,5 +37,5 @@ test('does not follow symlinks out of the tree', async () => {
 })
 
 test('returns 0 for a missing path rather than throwing', async () => {
-  assert.equal(await diskUsageBytes('/nonexistent/gigabye/path'), 0)
+  assert.equal(await diskUsageBytes('/nonexistent/purge/path'), 0)
 })

@@ -5,13 +5,13 @@ import { symlinkGuard } from './symlink.ts'
 import { volumeGuard } from './volume.ts'
 import { syncRootsGuard } from './sync-roots.ts'
 import { keepGuard } from './keep.ts'
-import { orphanGuard } from './orphan.ts'
+import { reportOnlyGuard } from './report-only.ts'
 import { fragileGuard } from './fragile.ts'
 import { gitGuard, annotateGitStatus } from './git.ts'
 
 /** Cheap, path-only guards run first so the expensive ones see fewer candidates. */
 const GUARDS: Guard[] = [
-  homeGuard, keepGuard, orphanGuard, syncRootsGuard, fragileGuard, symlinkGuard, volumeGuard, gitGuard,
+  homeGuard, keepGuard, reportOnlyGuard, syncRootsGuard, fragileGuard, symlinkGuard, volumeGuard, gitGuard,
 ]
 
 /**

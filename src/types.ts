@@ -1,8 +1,12 @@
-export type Group = 'builds' | 'pkg' | 'xcode' | 'browsers' | 'editors' | 'orphans'
+export type Group =
+  | 'builds' | 'pkg' | 'xcode' | 'browsers' | 'editors'
+  | 'caches' | 'logs' | 'claude' | 'orphans' | 'heavy'
 
-export const ALL_GROUPS: Group[] = ['builds', 'pkg', 'xcode', 'browsers', 'editors', 'orphans']
+export const ALL_GROUPS: Group[] = [
+  'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'claude', 'logs', 'orphans', 'heavy',
+]
 
-/** A thing gigabye found that could be deleted. */
+/** A thing purge found that could be deleted. */
 export type Candidate = {
   /** Absolute path. */
   path: string

@@ -6,7 +6,7 @@ import path from 'node:path'
 import { walk } from '../../src/scan/walker.ts'
 
 async function tree(spec: string[]): Promise<string> {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-walk-'))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-walk-'))
   for (const rel of spec) await fs.mkdir(path.join(root, rel), { recursive: true })
   return root
 }

@@ -1,6 +1,6 @@
 import type { Group, Reviewed } from '../types.ts'
 import { formatBytes } from '../util/bytes.ts'
-import { tildify } from './render.ts'
+import { HEADERS, ORDER, tildify } from './render.ts'
 
 export type Row =
   | { kind: 'header'; group: Group; bytes: number }
@@ -12,13 +12,6 @@ export type TuiState = {
   cursor: number
   done: 'pending' | 'confirm' | 'quit'
 }
-
-const HEADERS: Record<Group, string> = {
-  builds: 'BUILD ARTIFACTS', pkg: 'PACKAGE CACHES', xcode: 'XCODE',
-  browsers: 'BROWSER CACHES', editors: 'EDITOR CACHES', orphans: 'ORPHANED APP DATA',
-}
-
-const ORDER: Group[] = ['builds', 'pkg', 'xcode', 'browsers', 'editors', 'orphans']
 
 export function initState(items: Reviewed[]): TuiState {
   const rows: Row[] = []

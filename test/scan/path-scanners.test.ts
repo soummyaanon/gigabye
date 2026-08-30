@@ -10,7 +10,7 @@ import { browsersScanner } from '../../src/scan/browsers.ts'
 import type { ScanContext } from '../../src/scan/scanner.ts'
 
 async function fakeHome(dirs: string[]): Promise<ScanContext> {
-  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-home-'))
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-home-'))
   for (const d of dirs) await fs.mkdir(path.join(home, d), { recursive: true })
   return { home, staleDays: 60, now: Date.now(), applicationDirs: [] }
 }

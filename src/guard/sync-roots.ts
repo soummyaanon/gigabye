@@ -3,7 +3,7 @@ import { ALLOW, type Guard } from './guard.ts'
 
 /**
  * Paths under a cloud sync root. Deleting here does not just free local space
- * — it propagates the delete to every other machine on the account. gigabye
+ * — it propagates the delete to every other machine on the account. purge
  * shows these but never pre-checks them.
  *
  * Each entry is relative to home.

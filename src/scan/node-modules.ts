@@ -54,7 +54,7 @@ export const nodeModulesScanner: WalkScanner = {
 
     // Look deeper inside conventional source directories before concluding
     // a project is abandoned. Deleting an active project's node_modules is
-    // the most disruptive non-destructive thing gigabye can do.
+    // the most disruptive non-destructive thing purge can do.
     if (touched !== 0 && ctx.now - touched >= ctx.staleDays * DAY) {
       let siblings: string[] = []
       try {

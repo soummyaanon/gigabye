@@ -1,4 +1,4 @@
-# gigabye — design
+# purge — design
 
 **Status:** approved architecture, pending implementation plan
 **Date:** 2026-08-29
@@ -12,10 +12,10 @@ machine — build output, package caches, Xcode derived data, editor and browser
 caches — shows it grouped and sized, lets the user uncheck anything they want
 to keep, and deletes only what remains checked.
 
-    npx gigabye
+    npx purge
 
 Distributed on npm. Written in TypeScript. MIT licensed.
-Published as `github.com/soummyaanon/gigabye` → npm `gigabye`.
+Published as `github.com/soummyaanon/purge` → npm `purge`.
 
 ### Why it is being rewritten rather than shipped as-is
 
@@ -82,7 +82,7 @@ as selectable) or **downgrade** (shown, unchecked, with a visible warning).
 | Symlink | block | never follow, never delete the target |
 | Browser `Service Worker` | downgrade + warn | real PWA offline data |
 | `*/{iOS,watchOS,tvOS,visionOS} DeviceSupport` | downgrade + warn | needs the original device on the original OS build |
-| Matches `keep:` glob in `~/.gigabyerc` | block | user escape hatch (globs are `~`-expanded at load) |
+| Matches `keep:` glob in `~/.purgerc` | block | user escape hatch (globs are `~`-expanded at load) |
 | Below `--min-size` (default 10 MB) | hidden | noise |
 
 Git status is resolved by grouping candidates per repository root and batching
@@ -93,7 +93,7 @@ subprocess per path.
 
 - **Sizes come from `stat.blocks * 512`, never `stat.size`.** macOS "Optimize
   Storage" leaves dataless iCloud placeholders whose logical size is large and
-  whose on-disk size is zero. Using `size` would make gigabye claim to free
+  whose on-disk size is zero. Using `size` would make purge claim to free
   tens of GB that were never on disk.
 - **`reap/` re-validates every path against the guards immediately before
   deleting.** Minutes may pass while the user reads the TUI; the path may have
@@ -135,18 +135,18 @@ every other dependency shipping a `dist/` beside its `package.json`.
 
 ## 4. CLI surface
 
-    gigabye                     scan, interactive review, confirm, delete
-    gigabye --yes               non-interactive; deletes default-selected items
-    gigabye --dry-run           scan and print; never prompts, never deletes
-    gigabye builds pkg xcode    limit to named groups (positional)
-    gigabye --json              machine-readable scan output; implies --dry-run
-    gigabye history             past runs and lifetime total
-    gigabye history --last --json
-    gigabye --stale-days N      node_modules idle threshold (default 60)
-    gigabye --min-size N        ignore candidates under N MB (default 10)
-    gigabye --help, --version
+    purge                     scan, interactive review, confirm, delete
+    purge --yes               non-interactive; deletes default-selected items
+    purge --dry-run           scan and print; never prompts, never deletes
+    purge builds pkg xcode    limit to named groups (positional)
+    purge --json              machine-readable scan output; implies --dry-run
+    purge history             past runs and lifetime total
+    purge history --last --json
+    purge --stale-days N      node_modules idle threshold (default 60)
+    purge --min-size N        ignore candidates under N MB (default 10)
+    purge --help, --version
 
-Config file `~/.gigabyerc` (JSON) supports `keep` globs, `staleDays`,
+Config file `~/.purgerc` (JSON) supports `keep` globs, `staleDays`,
 `minSize`, and default groups.
 
 Exit codes: `0` success, `1` error, `2` nothing reclaimable found.
@@ -157,7 +157,7 @@ The TUI is hand-rolled on `node:readline` raw mode plus ANSI escapes — a
 scrolling grouped checkbox list with a live selected-total footer, roughly 200
 lines. Ink and Clack were both considered and rejected: shipping a large
 `node_modules` inside a tool whose headline feature is deleting `node_modules`
-is poor optics, and zero dependencies makes `npx gigabye` start instantly.
+is poor optics, and zero dependencies makes `npx purge` start instantly.
 `esbuild` and `typescript` are devDependencies only; the published package is a
 single bundled file.
 
@@ -166,10 +166,10 @@ single bundled file.
 Deletion is a real delete, so reclaimed space is free immediately. There is no
 undo; there is a precise record instead.
 
-Every run appends a manifest to `~/.gigabye/runs/<iso-timestamp>.json`
+Every run appends a manifest to `~/.purge/runs/<iso-timestamp>.json`
 containing every path, its size in bytes, its group, and the run timestamp.
 
-    gigabye history
+    purge history
 
       Aug 29   6.1 GB   builds, pkg
       Aug 12   2.4 GB   pkg
@@ -177,7 +177,7 @@ containing every path, its size in bytes, its group, and the run timestamp.
 
       lifetime reclaimed: 41.3 GB
 
-`gigabye history --last --json` emits the most recent manifest for scripting.
+`purge history --last --json` emits the most recent manifest for scripting.
 
 ## 6. Testing
 
@@ -190,7 +190,7 @@ Uses the built-in `node:test` runner — no test framework dependency.
 - **Reaper tests** — run against temp directories; assert the written manifest
   exactly matches what was removed, and that re-validation rejects a path that
   changed between scan and reap.
-- **The invariant test** — gigabye never deletes anything outside `$HOME`.
+- **The invariant test** — purge never deletes anything outside `$HOME`.
   This test must never be weakened.
 
 CI on GitHub Actions, `macos-latest`, Node 22.18 / 24 / 26. Node 20 cannot
@@ -202,11 +202,11 @@ may call `fs.rm`, `dependencies` must stay empty, and `du.ts` must measure
 
 ## 7. Release
 
-- Bundled to a single file with `esbuild`; `bin: { gigabye: dist/gigabye.js }`.
+- Bundled to a single file with `esbuild`; `bin: { purge: dist/purge.js }`.
 - Publish on git tag via GitHub Actions with npm provenance enabled.
 - `LICENSE` — MIT.
 - `README.md` — the pitch, one demo GIF, and a prominent safety section stating
-  exactly what gigabye will and will not touch, plus a "no telemetry" line.
+  exactly what purge will and will not touch, plus a "no telemetry" line.
 - A `gigabyte` typo-redirect package is **not** available: the name was
   unpublished in 2016, and npm restricts republishing unpublished names
   without support intervention.

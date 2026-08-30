@@ -4,7 +4,7 @@ export type GuardContext = {
   home: string
   /** st_dev of the home directory. A candidate on a different device is on another volume. */
   homeDev: number
-  /** Glob patterns from ~/.gigabyerc that must never be touched. Already ~-expanded. */
+  /** Glob patterns from ~/.purgerc that must never be touched. Already ~-expanded. */
   keepGlobs: string[]
   /**
    * True when macOS "Desktop & Documents Folders" iCloud sync is on. Those
@@ -16,6 +16,12 @@ export type GuardContext = {
   desktopDocsSynced: boolean
   /** Filled in by annotateGitStatus before guards run. Absolute path to "git ignores it". */
   gitIgnored?: Map<string, boolean>
+  /**
+   * Exact absolute paths outside home the home guard lets through. Today this
+   * is only Claude Code's sandbox scratchpad root. Exact match only — never a
+   * prefix — so nothing can ride in under an allowlisted directory.
+   */
+  allowOutsideHome?: string[]
 }
 
 export type Guard = {

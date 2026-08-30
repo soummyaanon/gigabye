@@ -7,7 +7,7 @@ import { scan } from '../../src/scan/index.ts'
 import type { ScanContext } from '../../src/scan/scanner.ts'
 
 async function home(): Promise<ScanContext> {
-  const h = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-scan-'))
+  const h = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-scan-'))
   return { home: h, staleDays: 60, now: Date.now(), applicationDirs: [] }
 }
 
@@ -55,4 +55,39 @@ test('reports progress while scanning', async () => {
   let calls = 0
   await scan(ctx, { groups: ['builds'], minSizeBytes: 0, onProgress: () => { calls++ } })
   assert.ok(calls > 0, 'onProgress was never called')
+})
+
+test('the deep groups run through the orchestrator', async () => {
+  const ctx = await home()
+  await fill(path.join(ctx.home, 'Library', 'Caches', 'SomeApp'), 50_000)
+  await fill(path.join(ctx.home, '.cache', 'uv'), 50_000)
+  await fill(path.join(ctx.home, 'Library', 'Logs', 'SomeApp'), 50_000)
+  await fill(path.join(ctx.home, '.claude', 'paste-cache'), 50_000)
+  await fill(path.join(ctx.home, '.Trash'), 50_000)
+  const got = await scan(ctx, { groups: ['caches', 'logs', 'claude', 'heavy'], minSizeBytes: 0 })
+  const groups = new Set(got.map((c) => c.group))
+  assert.deepEqual([...groups].sort(), ['caches', 'claude', 'heavy', 'logs'])
+})
+
+test('the walker leaves ~/.cache to the caches scanner', async () => {
+  const ctx = await home()
+  // a venv inside ~/.cache would otherwise be claimed by the builds walker
+  await fill(path.join(ctx.home, '.cache', 'tool', '.venv'), 50_000)
+  await fs.writeFile(path.join(ctx.home, '.cache', 'tool', '.venv', 'pyvenv.cfg'), '')
+  const got = await scan(ctx, { groups: ['builds', 'caches'], minSizeBytes: 0 })
+  assert.ok(got.every((c) => c.group === 'caches'), 'walker claimed something inside ~/.cache')
+})
+
+test('sizing progress reports the count and cumulative bytes', async () => {
+  const ctx = await home()
+  await fill(path.join(ctx.home, 'Library', 'Caches', 'AppA'), 50_000)
+  await fill(path.join(ctx.home, 'Library', 'Caches', 'AppB'), 60_000)
+  const seen: Array<[number, number]> = []
+  await scan(ctx, {
+    groups: ['caches'], minSizeBytes: 0,
+    onProgress: (done, bytes) => seen.push([done, bytes]),
+  })
+  assert.equal(seen.length, 2)
+  assert.equal(seen.at(-1)?.[0], 2)
+  assert.ok((seen.at(-1)?.[1] ?? 0) >= 110_000, `cumulative bytes missing: ${seen.at(-1)?.[1]}`)
 })

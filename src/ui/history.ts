@@ -13,7 +13,7 @@ export function renderHistory(runs: RunManifest[], opts: { color: boolean }): st
   const dim = opts.color ? (s: string) => `\x1b[2m${s}\x1b[0m` : (s: string) => s
   const bold = opts.color ? (s: string) => `\x1b[1m${s}\x1b[0m` : (s: string) => s
 
-  if (runs.length === 0) return '\n  no runs yet — run `gigabye` to reclaim some space\n'
+  if (runs.length === 0) return '\n  no runs yet — run `purge` to reclaim some space\n'
 
   const lines = ['']
   for (const r of runs) {

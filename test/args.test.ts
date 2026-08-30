@@ -14,7 +14,9 @@ test('defaults to an interactive scan over every group', () => {
   assert.equal(o.command, 'scan')
   assert.equal(o.apply, false)
   assert.equal(o.dryRun, false)
-  assert.deepEqual(o.groups, ['builds', 'pkg', 'xcode', 'browsers', 'editors', 'orphans'])
+  assert.deepEqual(o.groups, [
+    'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'claude', 'logs', 'orphans', 'heavy',
+  ])
 })
 
 test('positional group names narrow the scan', () => {

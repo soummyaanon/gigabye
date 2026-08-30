@@ -26,7 +26,7 @@ export async function readManifests(runsDir: string): Promise<RunManifest[]> {
       const raw = await fs.readFile(path.join(runsDir, name), 'utf8')
       const parsed = JSON.parse(raw) as RunManifest
       if (typeof parsed.ts === 'string' && Array.isArray(parsed.items)) out.push(parsed)
-    } catch { /* a corrupt manifest must never break `gigabye history` */ }
+    } catch { /* a corrupt manifest must never break `purge history` */ }
   }
 
   return out.sort((a, b) => b.ts.localeCompare(a.ts))

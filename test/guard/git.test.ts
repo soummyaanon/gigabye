@@ -11,7 +11,7 @@ import type { Candidate } from '../../src/types.ts'
 const run = promisify(execFile)
 
 async function repo(): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-git-'))
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-git-'))
   await run('git', ['init', '-q'], { cwd: dir })
   await run('git', ['config', 'user.email', 't@t.t'], { cwd: dir })
   await run('git', ['config', 'user.name', 't'], { cwd: dir })
@@ -49,7 +49,7 @@ test('reports an untracked, unignored directory as NOT ignored', async () => {
 })
 
 test('treats a path in no repository as ignored (guard does not apply)', async () => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'gigabye-nogit-'))
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-nogit-'))
   await fs.mkdir(path.join(dir, 'dist'))
   const map = await annotateGitStatus([cand(path.join(dir, 'dist'))])
   assert.equal(map.get(path.resolve(dir, 'dist')), true)
