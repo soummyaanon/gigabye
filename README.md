@@ -18,9 +18,12 @@
 </div>
 
 ```
-npm i -g purge-cli     # or: npx purge-cli@latest
+npm i -g purge-cli     # or run without installing: npx purge-cli@latest
 purge                  # or: purge-cli
 ```
+
+purge makes no network calls, so it never checks for updates itself — to
+update, run `npm i -g purge-cli@latest` again.
 
 > **Heads up:** macOS ships its own `/usr/sbin/purge` (it flushes disk
 > buffers and prints `Unable to purge disk buffers: Operation not
