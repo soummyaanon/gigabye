@@ -42,3 +42,13 @@ test('ignores a keep field that is not an array of strings', async () => {
   const c = await loadConfig(await home(JSON.stringify({ keep: 'nope' })))
   assert.deepEqual(c.keep, [])
 })
+
+test('maps the legacy claude group to agents', async () => {
+  const c = await loadConfig(await home(JSON.stringify({ groups: ['claude'] })))
+  assert.deepEqual(c.groups, ['agents'])
+})
+
+test('a groups list of only unknown names narrows to nothing, never to everything', async () => {
+  const c = await loadConfig(await home(JSON.stringify({ groups: ['bogus'] })))
+  assert.deepEqual(c.groups, [], 'an explicit-but-invalid groups list must stay restrictive')
+})

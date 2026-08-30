@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { ALL_GROUPS, type Group } from './types.ts'
+import { ALL_GROUPS, GROUP_ALIASES, type Group } from './types.ts'
 
 export type Config = {
   /** Glob patterns purge must never touch. */
@@ -48,8 +48,13 @@ export async function loadConfig(home: string): Promise<Config> {
   if (typeof src.staleDays === 'number' && src.staleDays >= 0) out.staleDays = src.staleDays
   if (typeof src.minSize === 'number' && src.minSize >= 0) out.minSize = src.minSize
   if (Array.isArray(src.groups)) {
-    const groups = src.groups.filter((g): g is Group => (ALL_GROUPS as string[]).includes(g as string))
-    if (groups.length > 0) out.groups = groups
+    const groups = src.groups
+      .map((g) => (typeof g === 'string' ? GROUP_ALIASES[g] ?? g : g))
+      .filter((g): g is Group => (ALL_GROUPS as string[]).includes(g as string))
+    // Assigned even when the filter leaves nothing: the user wrote an
+    // explicit restriction, and an unrecognized one must narrow the scan to
+    // nothing — never silently widen it back to every group.
+    out.groups = groups
   }
 
   return out

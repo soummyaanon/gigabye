@@ -18,6 +18,10 @@ const FRAGILE: Array<[RegExp, string]> = [
   [/(^|\/)\.cache\/(huggingface|torch)$/, 'model cache — re-download is slow'],
   // Claude Code session history: --resume and rewind stop working without it.
   [/(^|\/)\.claude\/(projects|file-history)$/, 'session history — resume and rewind stop working'],
+  // Codex session history: resume stops working without it.
+  [/(^|\/)\.codex\/(sessions|history\.jsonl)$/, 'session history — codex resume stops working'],
+  // Gemini CLI keeps /restore checkpoints and shell history here.
+  [/(^|\/)\.gemini\/tmp$/, 'session checkpoints — gemini restore stops working'],
   // Scratchpads of possibly-running Claude Code sessions.
   [/^\/private\/tmp\/claude-\d+$/, 'close running Claude Code sessions first'],
 ]

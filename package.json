@@ -1,6 +1,6 @@
 {
   "name": "purge-cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Purge the regenerable junk from your Mac \u2014 build output, caches, logs.",
   "type": "module",
   "bin": {
@@ -43,5 +43,9 @@
     "@types/node": "^22",
     "esbuild": "^0.25.0",
     "typescript": "^5.8.0"
+  },
+  "homepage": "https://github.com/soummyaanon/purge#readme",
+  "bugs": {
+    "url": "https://github.com/soummyaanon/purge/issues"
   }
 }

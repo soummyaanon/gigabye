@@ -15,7 +15,7 @@ test('defaults to an interactive scan over every group', () => {
   assert.equal(o.apply, false)
   assert.equal(o.dryRun, false)
   assert.deepEqual(o.groups, [
-    'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'claude', 'logs', 'orphans', 'heavy',
+    'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'agents', 'logs', 'orphans', 'heavy',
   ])
 })
 
@@ -82,4 +82,10 @@ test('an explicit flag beats a config default', () => {
   const o = parseArgs(['--stale-days', '10'], { staleDays: 90 })
   assert.ok(!('error' in o))
   assert.equal(o.staleDays, 10)
+})
+
+test('accepts the legacy group name claude as an alias for agents', () => {
+  const o = parseArgs(['claude'], {})
+  assert.ok(!('error' in o), 'claude must not be an unknown group')
+  if (!('error' in o)) assert.deepEqual(o.groups, ['agents'])
 })

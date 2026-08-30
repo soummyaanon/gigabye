@@ -6,7 +6,7 @@ import path from 'node:path'
 import { sysCachesScanner } from '../../src/scan/sys-caches.ts'
 import { logsScanner } from '../../src/scan/logs.ts'
 import { heavyScanner } from '../../src/scan/heavy.ts'
-import { claudeScanner } from '../../src/scan/claude.ts'
+import { agentsScanner } from '../../src/scan/agents.ts'
 import type { ScanContext } from '../../src/scan/scanner.ts'
 
 async function fakeHome(dirs: string[]): Promise<ScanContext> {
@@ -76,10 +76,10 @@ test('claims Claude Desktop caches but never its settings or storage', async () 
     'Library/Application Support/Claude/Local Storage',
     'Library/Application Support/Claude/IndexedDB',
   ])
-  const got = await claudeScanner.probe(ctx)
+  const got = await agentsScanner.probe(ctx)
   const labels = got.map((c) => c.label).sort()
   assert.deepEqual(labels, ['Claude Desktop Cache', 'Claude Desktop GPUCache'])
-  assert.ok(got.every((c) => c.group === 'claude'))
+  assert.ok(got.every((c) => c.group === 'agents'))
 })
 
 test('claims Claude Code caches, transcripts and file history', async () => {
@@ -93,7 +93,7 @@ test('claims Claude Code caches, transcripts and file history', async () => {
     '.claude/skills',
     '.claude/agents',
   ])
-  const got = await claudeScanner.probe(ctx)
+  const got = await agentsScanner.probe(ctx)
   const labels = got.map((c) => c.label).sort()
   assert.deepEqual(labels, [
     'Claude Code file history',
@@ -107,7 +107,7 @@ test('claims Claude Code caches, transcripts and file history', async () => {
 test('claims the sandbox scratchpad root when it exists', async () => {
   const ctx = await fakeHome([])
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'purge-claude-tmp-'))
-  const got = await claudeScanner.probe({ ...ctx, claudeTmpDir: tmp })
+  const got = await agentsScanner.probe({ ...ctx, claudeTmpDir: tmp })
   assert.deepEqual(got.map((c) => c.label), ['Claude Code session scratchpads'])
   assert.equal(got[0]?.path, tmp)
 })
@@ -124,4 +124,41 @@ test('enumerates per-app log dirs under Library/Logs', async () => {
   const labels = got.map((c) => c.label).sort()
   assert.deepEqual(labels, ['Claude', 'JetBrains'])
   assert.ok(got.every((c) => c.group === 'logs'))
+})
+
+test('claims Codex caches and logs, and its session history', async () => {
+  const ctx = await fakeHome(['.codex/cache', '.codex/sessions', '.codex/plugins'])
+  await fs.writeFile(path.join(ctx.home, '.codex/logs_2.sqlite'), 'db')
+  await fs.writeFile(path.join(ctx.home, '.codex/logs_2.sqlite-wal'), 'wal')
+  await fs.writeFile(path.join(ctx.home, '.codex/history.jsonl'), '{}')
+  await fs.writeFile(path.join(ctx.home, '.codex/config.toml'), '')
+  const got = await agentsScanner.probe(ctx)
+  const labels = got.map((c) => c.label).sort()
+  // logs_2.sqlite has a -wal sidecar: the database is open or was not
+  // checkpointed, so neither file may be claimed.
+  assert.deepEqual(labels, ['Codex cache', 'Codex history', 'Codex sessions'])
+})
+
+test('claims a Codex log db only when it is idle (no -wal/-shm sidecars)', async () => {
+  const ctx = await fakeHome(['.codex'])
+  await fs.writeFile(path.join(ctx.home, '.codex/logs_1.sqlite'), 'db')
+  const got = await agentsScanner.probe(ctx)
+  assert.deepEqual(got.map((c) => c.label), ['Codex log db (logs_1.sqlite)'])
+})
+
+test('claims Cursor AI tracking but never its extensions', async () => {
+  const ctx = await fakeHome(['.cursor/ai-tracking', '.cursor/extensions', '.cursor/plugins'])
+  const got = await agentsScanner.probe(ctx)
+  assert.deepEqual(got.map((c) => c.label), ['Cursor AI tracking'])
+})
+
+test('probes the other coding agents only where they exist', async () => {
+  const ctx = await fakeHome([
+    '.gemini/tmp', '.copilot/logs', '.aider/caches', '.local/share/opencode/log',
+  ])
+  const got = await agentsScanner.probe(ctx)
+  const labels = got.map((c) => c.label).sort()
+  assert.deepEqual(labels, [
+    'Copilot CLI logs', 'Gemini CLI tmp', 'aider cache', 'opencode logs',
+  ])
 })

@@ -137,11 +137,11 @@ test('downgrades ML model caches that are slow to re-download', async () => {
 
 test('downgrades Claude session history and live scratchpads', async () => {
   for (const p of ['/Users/x/.claude/projects', '/Users/x/.claude/file-history']) {
-    const v = await fragileGuard.check(cand(p, { group: 'claude' }), ctx)
+    const v = await fragileGuard.check(cand(p, { group: 'agents' }), ctx)
     assert.equal(v.action, 'downgrade', p)
     assert.match(v.action === 'downgrade' ? v.warning : '', /resume|rewind/)
   }
-  const v = await fragileGuard.check(cand('/private/tmp/claude-501', { group: 'claude' }), ctx)
+  const v = await fragileGuard.check(cand('/private/tmp/claude-501', { group: 'agents' }), ctx)
   assert.equal(v.action, 'downgrade')
   assert.match(v.action === 'downgrade' ? v.warning : '', /running|sessions/)
 })
@@ -158,4 +158,18 @@ test('blocks paths matching a keep glob', async () => {
   const local: GuardContext = { ...ctx, keepGlobs: ['**/work/**'] }
   assert.equal((await keepGuard.check(cand('/Users/x/work/api/.next'), local)).action, 'block')
   assert.equal((await keepGuard.check(cand('/Users/x/fun/api/.next'), local)).action, 'allow')
+})
+
+test('downgrades Codex session history', async () => {
+  for (const p of ['/Users/x/.codex/sessions', '/Users/x/.codex/history.jsonl']) {
+    const v = await fragileGuard.check(cand(p, { group: 'agents' }), ctx)
+    assert.equal(v.action, 'downgrade', p)
+    assert.match(v.action === 'downgrade' ? v.warning : '', /resume/)
+  }
+})
+
+test('downgrades Gemini CLI checkpoints', async () => {
+  const v = await fragileGuard.check(cand('/Users/x/.gemini/tmp', { group: 'agents' }), ctx)
+  assert.equal(v.action, 'downgrade')
+  assert.match(v.action === 'downgrade' ? v.warning : '', /restore/)
 })

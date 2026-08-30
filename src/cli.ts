@@ -12,7 +12,7 @@ import { renderHistory } from './ui/history.ts'
 import { review } from './ui/tui.ts'
 import { banner, liveLine, scanLine, reapLine } from './ui/progress.ts'
 
-const VERSION = '0.2.0'
+const VERSION = '0.3.0'
 
 const HELP = `
 purge v${VERSION} — reclaim the regenerable junk on your Mac
@@ -27,7 +27,7 @@ GROUPS (default: all)
   caches     every app's folder in ~/Library/Caches and ~/.cache
   browsers   GPU and service worker caches, on-device AI models
   editors    Cursor, VS Code, Windsurf and Zed caches
-  claude     Claude Desktop/Code caches, transcripts, sandbox scratchpads
+  agents     Claude, Codex, Cursor, Gemini, Copilot, opencode, aider junk
   logs       per-app folders in ~/Library/Logs
   orphans    app data whose app is gone (report only, never deleted)
   heavy      iOS backups, Trash, Docker.raw (report only, never deleted)

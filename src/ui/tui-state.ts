@@ -3,7 +3,7 @@ import { formatBytes } from '../util/bytes.ts'
 import { HEADERS, ORDER, tildify } from './render.ts'
 
 export type Row =
-  | { kind: 'header'; group: Group; bytes: number }
+  | { kind: 'header'; group: Group; bytes: number; count: number }
   | { kind: 'item'; index: number }
 
 export type TuiState = {
@@ -11,54 +11,161 @@ export type TuiState = {
   rows: Row[]
   cursor: number
   done: 'pending' | 'confirm' | 'quit'
+  /** Groups whose item rows are folded away. */
+  collapsed: Group[]
+  /** Case-insensitive substring applied to item paths and labels. */
+  filter: string
+  /** True while the user is typing in the filter line. */
+  filtering: boolean
+}
+
+function matches(it: Reviewed, filter: string): boolean {
+  if (filter === '') return true
+  const f = filter.toLowerCase()
+  return it.path.toLowerCase().includes(f) || it.label.toLowerCase().includes(f)
+}
+
+/**
+ * Rows are always derived from (items, collapsed, filter), never edited in
+ * place. A group with no matching items disappears entirely; a collapsed
+ * group keeps its header so it can be unfolded.
+ */
+function buildRows(items: Reviewed[], collapsed: Group[], filter: string): Row[] {
+  const rows: Row[] = []
+  for (const group of ORDER) {
+    const visible = items
+      .map((it, i) => [it, i] as const)
+      .filter(([it]) => it.group === group && matches(it, filter))
+    if (visible.length === 0) continue
+    rows.push({
+      kind: 'header', group,
+      bytes: visible.reduce((n, [it]) => n + it.bytes, 0),
+      count: visible.length,
+    })
+    if (collapsed.includes(group)) continue
+    for (const [, i] of visible) rows.push({ kind: 'item', index: i })
+  }
+  return rows
+}
+
+function clamp(cursor: number, rows: Row[]): number {
+  return Math.max(0, Math.min(cursor, rows.length - 1))
+}
+
+/** The group a row belongs to: its own for headers, the enclosing one for items. */
+function groupAt(s: TuiState, cursor: number): Group | null {
+  for (let i = cursor; i >= 0; i--) {
+    const row = s.rows[i]
+    if (row?.kind === 'header') return row.group
+  }
+  return null
+}
+
+function rebuilt(s: TuiState, over: Partial<TuiState>): TuiState {
+  const next = { ...s, ...over }
+  const rows = buildRows(next.items, next.collapsed, next.filter)
+  return { ...next, rows, cursor: clamp(next.cursor, rows) }
 }
 
 export function initState(items: Reviewed[]): TuiState {
-  const rows: Row[] = []
-  for (const group of ORDER) {
-    const indices = items.map((it, i) => [it, i] as const).filter(([it]) => it.group === group)
-    if (indices.length === 0) continue
-    rows.push({ kind: 'header', group, bytes: indices.reduce((n, [it]) => n + it.bytes, 0) })
-    for (const [, i] of indices) rows.push({ kind: 'item', index: i })
-  }
+  const rows = buildRows(items, [], '')
   const cursor = rows.findIndex((r) => r.kind === 'item')
-  return { items, rows, cursor: cursor === -1 ? 0 : cursor, done: 'pending' }
-}
-
-/** Next row of kind 'item' in `dir`, or the current one if there is none. */
-function step(s: TuiState, dir: 1 | -1): number {
-  for (let i = s.cursor + dir; i >= 0 && i < s.rows.length; i += dir) {
-    if (s.rows[i]?.kind === 'item') return i
+  return {
+    items, rows, cursor: cursor === -1 ? 0 : cursor, done: 'pending',
+    collapsed: [], filter: '', filtering: false,
   }
-  return s.cursor
 }
 
 export function selectedBytes(s: TuiState): number {
   return s.items.filter((i) => i.selected && i.selectable).reduce((n, i) => n + i.bytes, 0)
 }
 
+/** Every selectable item the current filter lets through. */
+function visibleSelectable(s: TuiState, group?: Group): Reviewed[] {
+  return s.items.filter(
+    (i) => i.selectable && matches(i, s.filter) && (group === undefined || i.group === group),
+  )
+}
+
+function setSelected(s: TuiState, target: (it: Reviewed) => boolean, on: boolean): TuiState {
+  return rebuilt(s, { items: s.items.map((it) => (target(it) ? { ...it, selected: on } : it)) })
+}
+
 /** Pure. Never mutates `s` — the tests depend on this. */
 export function reduce(s: TuiState, key: string): TuiState {
+  if (key.startsWith('char:')) {
+    if (!s.filtering) return s
+    return rebuilt(s, { filter: s.filter + key.slice(5) })
+  }
+
   switch (key) {
-    case 'up': return { ...s, cursor: step(s, -1) }
-    case 'down': return { ...s, cursor: step(s, 1) }
+    case 'up': return { ...s, cursor: clamp(s.cursor - 1, s.rows) }
+    case 'down': return { ...s, cursor: clamp(s.cursor + 1, s.rows) }
+    case 'g': return { ...s, cursor: 0 }
+    case 'G': return { ...s, cursor: clamp(s.rows.length - 1, s.rows) }
+
     case 'space': {
       const row = s.rows[s.cursor]
-      if (row?.kind !== 'item') return s
-      // A report-only row (the orphans group) is shown but never checkable.
+      if (row === undefined) return s
+      if (row.kind === 'header') {
+        const inGroup = visibleSelectable(s, row.group)
+        if (inGroup.length === 0) return s // report-only groups have nothing to toggle
+        const allOn = inGroup.every((i) => i.selected)
+        return setSelected(s, (it) => it.group === row.group && it.selectable && matches(it, s.filter), !allOn)
+      }
+      // A report-only row (orphans, heavy) is shown but never checkable.
       if (s.items[row.index]?.selectable === false) return s
       const items = s.items.map((it, i) => (i === row.index ? { ...it, selected: !it.selected } : it))
       return { ...s, items }
     }
+
     case 'a': {
-      const selectableItems = s.items.filter((i) => i.selectable)
-      const allOn = selectableItems.length > 0 && selectableItems.every((i) => i.selected)
-      return {
-        ...s,
-        items: s.items.map((i) => (i.selectable ? { ...i, selected: !allOn } : i)),
-      }
+      const visible = visibleSelectable(s)
+      const allOn = visible.length > 0 && visible.every((i) => i.selected)
+      return setSelected(s, (it) => it.selectable && matches(it, s.filter), !allOn)
     }
-    case 'enter': return { ...s, done: 'confirm' }
+
+    case 'fold': case 'unfold': {
+      const group = groupAt(s, s.cursor)
+      if (group === null) return s
+      const collapsed = key === 'fold'
+        ? (s.collapsed.includes(group) ? s.collapsed : [...s.collapsed, group])
+        : s.collapsed.filter((g) => g !== group)
+      // A no-op fold/unfold must not move the cursor either.
+      if (collapsed.length === s.collapsed.length) return s
+      const next = rebuilt(s, { collapsed })
+      const header = next.rows.findIndex((r) => r.kind === 'header' && r.group === group)
+      return { ...next, cursor: header === -1 ? next.cursor : header }
+    }
+
+    case 'filter-start': return { ...s, filtering: true }
+    case 'backspace': {
+      if (!s.filtering) return s
+      return rebuilt(s, { filter: s.filter.slice(0, -1) })
+    }
+    case 'escape': {
+      // Escape only clears the filter. It never quits: discarding minutes of
+      // checkbox work on a reflex keypress is worse than a dead key.
+      if (!s.filtering && s.filter === '') return s
+      const next = rebuilt(s, { filter: '', filtering: false })
+      const item = next.rows.findIndex((r) => r.kind === 'item')
+      return { ...next, cursor: item === -1 ? next.cursor : item }
+    }
+    case 'enter': {
+      if (s.filtering) return { ...s, filtering: false }
+      // Confirming while a filter hides checked rows would delete things the
+      // user cannot currently see. Reveal everything first; the next enter
+      // confirms what is actually on screen.
+      if (s.filter !== '') {
+        const hidden = s.items.some((i) => i.selected && i.selectable && !matches(i, s.filter))
+        if (hidden) {
+          const next = rebuilt(s, { filter: '' })
+          const item = next.rows.findIndex((r) => r.kind === 'item')
+          return { ...next, cursor: item === -1 ? next.cursor : item }
+        }
+      }
+      return { ...s, done: 'confirm' }
+    }
     case 'q': return { ...s, done: 'quit' }
     default: return s
   }
@@ -72,32 +179,46 @@ export function renderFrame(
     ? (code: string, str: string) => `\x1b[${code}m${str}\x1b[0m`
     : (_code: string, str: string) => str
 
-  const body = Math.max(3, height - 4)
+  const footer = s.filtering || s.filter !== '' ? 5 : 4
+  const body = Math.max(3, height - footer)
   const start = Math.max(0, Math.min(s.cursor - Math.floor(body / 2), s.rows.length - body))
   const lines: string[] = []
 
   for (let i = start; i < Math.min(start + body, s.rows.length); i++) {
     const row = s.rows[i]
     if (row === undefined) break
+    const here = i === s.cursor
     if (row.kind === 'header') {
-      lines.push(`${paint('1', HEADERS[row.group])}  ${paint('2', formatBytes(row.bytes))}`)
+      const mark = s.collapsed.includes(row.group) ? '▸' : '▾'
+      // The header carries the group's aggregate checkbox so that toggling a
+      // group — a folded one especially — has visible feedback.
+      const inGroup = s.items.filter((it) => it.group === row.group && it.selectable && matches(it, s.filter))
+      const on = inGroup.filter((it) => it.selected).length
+      const box = inGroup.length === 0 ? '[-]' : on === 0 ? '[ ]' : on === inGroup.length ? '[x]' : '[~]'
+      const text = `${mark} ${box} ${HEADERS[row.group]}  ${formatBytes(row.bytes)} (${row.count})`
+      lines.push(here ? paint('7', text) : `${paint('1', `${mark} ${box} ${HEADERS[row.group]}`)}  ${paint('2', `${formatBytes(row.bytes)} (${row.count})`)}`)
       continue
     }
     const it = s.items[row.index]
     if (it === undefined) continue
-    const here = i === s.cursor
     // '[-]' marks a row that exists for information only and cannot be checked.
     const box = !it.selectable ? '[-]' : it.selected ? '[x]' : '[ ]'
     // Same de-duplication as renderReport: a warning that repeats the note
     // verbatim must not print the text twice.
     const note = it.note && !it.warnings.includes(it.note) ? paint('2', `  ${it.note}`) : ''
     const warn = it.warnings.length > 0 ? paint('33', `  ! ${it.warnings.join(', ')}`) : ''
-    const text = ` ${box} ${formatBytes(it.bytes).padStart(9)}  ${tildify(it.path, opts.home)}${note}${warn}`
+    const text = `   ${box} ${formatBytes(it.bytes).padStart(9)}  ${tildify(it.path, opts.home)}${note}${warn}`
     lines.push(here ? paint('7', text) : text)
   }
 
   lines.push('')
-  lines.push(paint('2', '  space toggle   a all   enter continue   q quit'))
-  lines.push(paint('1', `  selected: ${formatBytes(selectedBytes(s))}`))
+  if (s.filtering || s.filter !== '') {
+    lines.push(`  / ${s.filter}${s.filtering ? paint('7', ' ') : ''}`)
+  }
+  lines.push(paint('2', s.filtering
+    ? '  type to filter   ↑/↓ move   enter keep   esc clear'
+    : '  space toggle   ←/→ fold   a all   / filter   g/G ends   enter continue   q quit'))
+  const selected = s.items.filter((i) => i.selected && i.selectable)
+  lines.push(paint('1', `  selected: ${selected.length} items, ${formatBytes(selectedBytes(s))}`))
   return lines.join('\n')
 }

@@ -14,7 +14,7 @@ import { browsersScanner } from './browsers.ts'
 import { orphansScanner } from './orphans.ts'
 import { sysCachesScanner } from './sys-caches.ts'
 import { logsScanner } from './logs.ts'
-import { claudeScanner } from './claude.ts'
+import { agentsScanner } from './agents.ts'
 import { heavyScanner } from './heavy.ts'
 
 const WALK_SCANNERS: WalkScanner[] = [
@@ -23,7 +23,7 @@ const WALK_SCANNERS: WalkScanner[] = [
 
 const PATH_SCANNERS: PathScanner[] = [
   pkgCacheScanner, xcodeScanner, editorsScanner, browsersScanner, orphansScanner,
-  sysCachesScanner, logsScanner, claudeScanner, heavyScanner,
+  sysCachesScanner, logsScanner, agentsScanner, heavyScanner,
 ]
 
 /** Sizing is I/O bound. Bound the concurrency so a big home directory does not thrash. */

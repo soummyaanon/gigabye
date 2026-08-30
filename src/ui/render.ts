@@ -8,14 +8,14 @@ export const HEADERS: Record<Group, string> = {
   caches: 'APP CACHES',
   browsers: 'BROWSER CACHES',
   editors: 'EDITOR CACHES',
-  claude: 'CLAUDE DATA',
+  agents: 'CODING AGENTS',
   logs: 'LOGS',
   orphans: 'ORPHANED APP DATA',
   heavy: 'HEAVY ITEMS',
 }
 
 export const ORDER: Group[] = [
-  'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'claude', 'logs', 'orphans', 'heavy',
+  'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'agents', 'logs', 'orphans', 'heavy',
 ]
 
 type Paint = (s: string) => string

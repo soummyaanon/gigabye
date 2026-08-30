@@ -1,0 +1,23 @@
+name: Feature request
+description: A new junk source, guard, or workflow idea
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What should purge find or do?
+      description: |
+        For a new junk source, include the exact paths, what regenerates
+        them, and what breaks (if anything) when they're deleted.
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Can this ever hold unrecoverable data?
+      description: |
+        The question every scanner must answer. "No, because…" or
+        "Yes, when…" — this decides whether it ships checked, downgraded,
+        or report-only.
+    validations:
+      required: true

@@ -64,9 +64,9 @@ test('the deep groups run through the orchestrator', async () => {
   await fill(path.join(ctx.home, 'Library', 'Logs', 'SomeApp'), 50_000)
   await fill(path.join(ctx.home, '.claude', 'paste-cache'), 50_000)
   await fill(path.join(ctx.home, '.Trash'), 50_000)
-  const got = await scan(ctx, { groups: ['caches', 'logs', 'claude', 'heavy'], minSizeBytes: 0 })
+  const got = await scan(ctx, { groups: ['caches', 'logs', 'agents', 'heavy'], minSizeBytes: 0 })
   const groups = new Set(got.map((c) => c.group))
-  assert.deepEqual([...groups].sort(), ['caches', 'claude', 'heavy', 'logs'])
+  assert.deepEqual([...groups].sort(), ['agents', 'caches', 'heavy', 'logs'])
 })
 
 test('the walker leaves ~/.cache to the caches scanner', async () => {

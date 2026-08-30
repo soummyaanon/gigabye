@@ -1,4 +1,4 @@
-import { ALL_GROUPS, type Group } from './types.ts'
+import { ALL_GROUPS, GROUP_ALIASES, type Group } from './types.ts'
 
 export type Options = {
   command: 'scan' | 'history' | 'help' | 'version'
@@ -49,10 +49,11 @@ export function parseArgs(argv: string[], defaults: Partial<Options>): Options |
       }
       default: {
         if (a.startsWith('-')) return { error: `unknown option: ${a}` }
-        if (!(ALL_GROUPS as string[]).includes(a)) {
+        const name = GROUP_ALIASES[a] ?? a
+        if (!(ALL_GROUPS as string[]).includes(name)) {
           return { error: `unknown group: ${a} (try ${ALL_GROUPS.join(', ')})` }
         }
-        o.groups.push(a as Group)
+        o.groups.push(name as Group)
       }
     }
   }

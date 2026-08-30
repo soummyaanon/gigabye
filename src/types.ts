@@ -1,10 +1,17 @@
 export type Group =
   | 'builds' | 'pkg' | 'xcode' | 'browsers' | 'editors'
-  | 'caches' | 'logs' | 'claude' | 'orphans' | 'heavy'
+  | 'caches' | 'logs' | 'agents' | 'orphans' | 'heavy'
 
 export const ALL_GROUPS: Group[] = [
-  'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'claude', 'logs', 'orphans', 'heavy',
+  'builds', 'pkg', 'xcode', 'caches', 'browsers', 'editors', 'agents', 'logs', 'orphans', 'heavy',
 ]
+
+/**
+ * Renamed groups keep working under their old names: a v0.2.0 cron job
+ * running `purge claude` or a ~/.purgerc pinning ["claude"] must not break
+ * (or worse, silently widen) on upgrade.
+ */
+export const GROUP_ALIASES: Record<string, Group> = { claude: 'agents' }
 
 /** A thing purge found that could be deleted. */
 export type Candidate = {

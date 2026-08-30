@@ -14,16 +14,41 @@ const HIDE_CURSOR = '\x1b[?25l'
 const SHOW_CURSOR = '\x1b[?25h'
 const CLEAR = '\x1b[2J\x1b[H'
 
-function keyName(str: string, key: { name?: string; ctrl?: boolean }): string | null {
+function keyName(
+  str: string, key: { name?: string; ctrl?: boolean }, filtering: boolean,
+): string | null {
   if (key.ctrl && key.name === 'c') return 'q'
+
+  // While the filter line is open, printable characters are query text and
+  // only enter/escape/backspace keep their meaning.
+  if (filtering) {
+    switch (key.name) {
+      case 'return': return 'enter'
+      case 'escape': return 'escape'
+      case 'backspace': return 'backspace'
+      // Arrow keys still navigate the narrowed list while typing.
+      case 'up': return 'up'
+      case 'down': return 'down'
+    }
+    return typeof str === 'string' && str.length === 1 && str >= ' ' ? `char:${str}` : null
+  }
+
   switch (key.name) {
     case 'up': case 'k': return 'up'
     case 'down': case 'j': return 'down'
+    case 'left': case 'h': return 'fold'
+    case 'right': case 'l': return 'unfold'
     case 'return': return 'enter'
     case 'space': return 'space'
-    case 'q': case 'escape': return 'q'
+    case 'escape': return 'escape'
+    case 'q': return 'q'
     case 'a': return 'a'
-    default: return str === ' ' ? 'space' : null
+    case 'g': return str === 'G' ? 'G' : 'g'
+    default: {
+      if (str === ' ') return 'space'
+      if (str === '/') return 'filter-start'
+      return null
+    }
   }
 }
 
@@ -62,7 +87,7 @@ export function review(items: Reviewed[]): Promise<Reviewed[] | null> {
     process.on('SIGINT', onSigint)
 
     process.stdin.on('keypress', (str: string, key: { name?: string; ctrl?: boolean }) => {
-      const name = keyName(str, key ?? {})
+      const name = keyName(str, key ?? {}, state.filtering)
       if (name === null) return
       state = reduce(state, name)
       if (state.done === 'quit') { restore(); return resolve(null) }
