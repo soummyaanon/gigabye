@@ -8,6 +8,10 @@ import type { PathScanner, RawCandidate } from './scanner.ts'
  */
 export const PKG_CACHE_PATHS: Array<[string, string]> = [
   ['.npm/_cacache', 'npm cache'],
+  ['.npm/_npx', 'npx cache'],
+  // The parent of the versioned v3/v10/... store dirs, so every pnpm works.
+  // Projects keep working: their node_modules hard-link the same inodes.
+  ['Library/pnpm/store', 'pnpm store'],
   ['.bun/install/cache', 'bun cache'],
   ['Library/Caches/ms-playwright', 'playwright browsers'],
   ['Library/Caches/electron', 'electron downloads'],

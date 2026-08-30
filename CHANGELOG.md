@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [semver](https://semver.org).
 
+## [0.6.0] - 2026-08-30
+
+### Added
+- Cache discovery: the `caches` group now finds `cache`/`tmp`/`logs`
+  directories inside any hidden `~/.tool` folder by naming convention —
+  tools purge has never heard of get their junk found automatically.
+  Identity dirs (`.ssh`, `.gnupg`, `.aws`, ...) are never probed, dot dirs
+  other scanners own are left to their groups, and anything already
+  claimed this scan is never duplicated. Junk names match
+  case-insensitively so case-sensitive APFS behaves like the default.
+- `pkg` group: the npx cache (`~/.npm/_npx`) and the pnpm store
+  (`~/Library/pnpm/store`, covering every store version).
+
 ## [0.5.0] - 2026-08-30
 
 ### Added

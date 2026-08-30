@@ -40,5 +40,10 @@ export type WalkScanner = {
 export type PathScanner = {
   name: string
   group: Group
-  probe(ctx: ScanContext): Promise<RawCandidate[]>
+  /**
+   * `claimed` holds the absolute paths every earlier scanner (walker included)
+   * already claimed this scan, so a discovering scanner never duplicates a
+   * row. Curated scanners may ignore it.
+   */
+  probe(ctx: ScanContext, claimed?: ReadonlySet<string>): Promise<RawCandidate[]>
 }

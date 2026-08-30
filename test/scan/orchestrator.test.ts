@@ -78,6 +78,21 @@ test('the walker leaves ~/.cache to the caches scanner', async () => {
   assert.ok(got.every((c) => c.group === 'caches'), 'walker claimed something inside ~/.cache')
 })
 
+test('discovery reaches tools no curated scanner has heard of', async () => {
+  const ctx = await home()
+  await fill(path.join(ctx.home, '.mysterytool', 'cache'), 50_000)
+  const got = await scan(ctx, { groups: ['caches'], minSizeBytes: 0 })
+  assert.ok(got.some((c) => c.label === '.mysterytool/cache'), 'discovery missed .mysterytool/cache')
+})
+
+test('discovery never duplicates a row another scanner claimed', async () => {
+  const ctx = await home()
+  await fill(path.join(ctx.home, '.gemini', 'tmp'), 50_000)
+  const got = await scan(ctx, { groups: ['agents', 'caches'], minSizeBytes: 0 })
+  const rows = got.filter((c) => c.path.endsWith(path.join('.gemini', 'tmp')))
+  assert.equal(rows.length, 1, `expected one row for .gemini/tmp, got ${rows.length}`)
+})
+
 test('sizing progress reports the count and cumulative bytes', async () => {
   const ctx = await home()
   await fill(path.join(ctx.home, 'Library', 'Caches', 'AppA'), 50_000)

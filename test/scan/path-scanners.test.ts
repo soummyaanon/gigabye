@@ -23,6 +23,13 @@ test('finds package caches that exist and skips those that do not', async () => 
   assert.ok(got.every((c) => c.group === 'pkg'))
 })
 
+test('finds the npx cache and the pnpm store', async () => {
+  const ctx = await fakeHome(['.npm/_npx', 'Library/pnpm/store'])
+  const got = await pkgCacheScanner.probe(ctx)
+  const labels = got.map((c) => c.label).sort()
+  assert.deepEqual(labels, ['npx cache', 'pnpm store'])
+})
+
 test('marks device support as needing the original device', async () => {
   const ctx = await fakeHome(['Library/Developer/Xcode/iOS DeviceSupport'])
   const [got] = await xcodeScanner.probe(ctx)

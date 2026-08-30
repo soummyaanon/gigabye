@@ -13,6 +13,8 @@
 ![node](https://img.shields.io/badge/node-%E2%89%A522.18-brightgreen)
 ![deps](https://img.shields.io/badge/runtime%20deps-0-black)
 
+[purge.bixai.dev](https://purge.bixai.dev/)
+
 </div>
 
 ```
@@ -37,9 +39,9 @@ sized, and deletes only what you leave checked.
 | Group | What |
 |---|---|
 | `builds` | `.next`, `.turbo`, `dist`, `build`, cargo `target`, python venvs, idle `node_modules` |
-| `pkg` | npm, bun, playwright, electron, homebrew, gradle caches |
+| `pkg` | npm, npx, pnpm store, bun, playwright, electron, homebrew, gradle caches |
 | `xcode` | DerivedData, device support, simulator caches |
-| `caches` | every app's folder in `~/Library/Caches` and `~/.cache`, one row each |
+| `caches` | every app's folder in `~/Library/Caches` and `~/.cache`, plus auto-discovered `cache`/`tmp`/`logs` dirs inside any hidden `~/.tool` folder — even tools purge has never heard of |
 | `browsers` | GPU and service worker caches, on-device AI models |
 | `editors` | Cursor, VS Code, Windsurf, Zed caches |
 | `agents` | Claude, Codex, Cursor, Gemini, Copilot, opencode, aider — caches, logs, scratchpads |

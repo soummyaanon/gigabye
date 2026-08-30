@@ -13,6 +13,7 @@ import { editorsScanner } from './editors.ts'
 import { browsersScanner } from './browsers.ts'
 import { orphansScanner } from './orphans.ts'
 import { sysCachesScanner } from './sys-caches.ts'
+import { discoverScanner } from './discover.ts'
 import { logsScanner } from './logs.ts'
 import { agentsScanner } from './agents.ts'
 import { heavyScanner } from './heavy.ts'
@@ -24,6 +25,8 @@ const WALK_SCANNERS: WalkScanner[] = [
 const PATH_SCANNERS: PathScanner[] = [
   pkgCacheScanner, xcodeScanner, editorsScanner, browsersScanner, orphansScanner,
   sysCachesScanner, logsScanner, agentsScanner, heavyScanner,
+  // last on purpose: discovery dedupes against everything claimed above
+  discoverScanner,
 ]
 
 /** Sizing is I/O bound. Bound the concurrency so a big home directory does not thrash. */
@@ -102,7 +105,7 @@ export async function scan(
 
   for (const scanner of PATH_SCANNERS) {
     if (!wanted.has(scanner.group)) continue
-    raw.push(...(await scanner.probe(ctx)))
+    raw.push(...(await scanner.probe(ctx, new Set(raw.map((r) => r.path)))))
   }
 
   const sized = await sizeAll(raw, opts.onProgress)
